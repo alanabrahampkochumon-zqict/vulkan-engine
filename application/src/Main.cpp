@@ -30,13 +30,32 @@ private:
     }
 
     void initVulkan() {}
-    void mainLoop() {}
+    void mainLoop()
+    {
+        while (_gameRunning)
+        {
+            SDL_Event event;
+            while (SDL_PollEvent(&event))
+            {
+                switch (event.type)
+                {
+                    case SDL_EVENT_QUIT:
+                        _gameRunning = false;
+                        break;
+                    default:
+                        continue;
+                }
+            }
+        }
+    }
     void cleanUp() { SDL_DestroyWindow(_window); }
 
 private:
     SDL_Window* _window{ nullptr };
     static constexpr size_t WIDTH  = 1280;
     static constexpr size_t HEIGHT = 720;
+
+    bool _gameRunning{ true };
 };
 
 int main()
