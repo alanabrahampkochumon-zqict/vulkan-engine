@@ -1,6 +1,5 @@
 add_executable(BenchmarkSuite)
 
-
 #Directories
 set(SourceDir "src/")
 

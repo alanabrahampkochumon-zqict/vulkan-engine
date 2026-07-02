@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.25)
 project(GenericProject LANGUAGES CXX)
 enable_testing()
 
+
+# Vulkan
+find_package(Vulkan REQUIRED)
+if (NOT Vulkan_FOUND)
+    message(WARNING "Vulkan SDK not found! Make sure you have vulkan installed and put in the system path")
+endif ()
+# Add include directories
+include_directories(${Vulkan_INCLUDE_DIRS})
+
+
 add_library(StrictWarnings INTERFACE) # Used for linking Warning flags
 add_library(ProjectASan INTERFACE) # Used for linking ASan
 
@@ -13,35 +23,35 @@ set(DevToolsDir "Dev Tools")
 # Clang Formatter
 find_program(CLANG_FORMATTER NAMES clang-format)
 
-if(CLANG_FORMATTER)
+if (CLANG_FORMATTER)
     file(GLOB_RECURSE ALL_SOURCE_FILES *.cpp *.h *.cxx *.hxx *.hpp *.cc *.hh *.tpp *.inl)
 
     add_custom_target(format
-        COMMAND ${CLANG_FORMATTER} -i -style=file ${ALL_SOURCE_FILES}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMENT "Formatting source files..."
+            COMMAND ${CLANG_FORMATTER} -i -style=file ${ALL_SOURCE_FILES}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Formatting source files..."
     )
     set_target_properties(format PROPERTIES FOLDER ${DevToolsDir})
-else()
+else ()
     message(WARNING "clang-format not found")
-endif()
+endif ()
 
 
 # Clang Tidy
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
-if(CLANG_TIDY_EXE)
+if (CLANG_TIDY_EXE)
     # Create a custom target that you manually trigger
     add_custom_target(
-        lint
-        COMMAND ${CMAKE_COMMAND} -E echo "Running Clang-Tidy on MathLib..."
-        COMMAND run-clang-tidy -p ${CMAKE_BINARY_DIR} -header-filter=.*
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMENT "Running static analysis..."
+            lint
+            COMMAND ${CMAKE_COMMAND} -E echo "Running Clang-Tidy on MathLib..."
+            COMMAND run-clang-tidy -p ${CMAKE_BINARY_DIR} -header-filter=.*
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Running static analysis..."
     )
     set_target_properties(lint PROPERTIES FOLDER ${DevToolsDir})
-else()
+else ()
     message(WARNING "clang-tidy not found")
-endif()
+endif ()
 
 
 # Doxygen
@@ -49,63 +59,61 @@ find_package(Doxygen)
 if (DOXYGEN_FOUND)
     message(STATUS "Doxygen found!")
     doxygen_add_docs(
-        docs
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Generating documentation with doxygen..."
-        CONFIG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
-        ALL
+            docs
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Generating documentation with doxygen..."
+            CONFIG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+            ALL
     )
     set_target_properties(docs PROPERTIES FOLDER ${DevToolsDir})
-else()
+else ()
     message(WARN "Doxygen not found! Skipping documentation generation.")
-endif()
-
+endif ()
 
 
 option(ENABLE_STRICT "Enable Strict Warnings" OFF) # Option to enable compiler specific "Warning as Error"
 option(ASAN "Enable ASan" OFF) # Option to enable ASAN
 
 # Enables Strict Warnings and Debug-only ASan
-if(ENABLE_STRICT)
+if (ENABLE_STRICT)
     message(STATUS "Configuring Strict Warnings")
-    if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(StrictWarnings INTERFACE
-            $<$<COMPILE_LANGUAGE:CXX>:/WX;/W4;/permissive-;/fp:strict>
+                $<$<COMPILE_LANGUAGE:CXX>:/WX;/W4;/permissive-;/fp:strict>
         )
-    else()
+    else ()
         target_compile_options(StrictWarnings INTERFACE
-            $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Werror;-pedantic-errors>
-            $<$<CXX_COMPILER_ID:Clang>:-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-pre-c++14-compat;-Wno-pre-c++17-compat;-Wno-c++20-compat>
-            $<$<CXX_COMPILER_ID:AppleClang>:-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-pre-c++14-compat;-Wno-pre-c++17-compat;-Wno-c++20-compat>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Werror;-pedantic-errors>
+                $<$<CXX_COMPILER_ID:Clang>:-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-pre-c++14-compat;-Wno-pre-c++17-compat;-Wno-c++20-compat>
+                $<$<CXX_COMPILER_ID:AppleClang>:-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-pre-c++14-compat;-Wno-pre-c++17-compat;-Wno-c++20-compat>
         )
-    endif()
-endif()
+    endif ()
+endif ()
 
 
 # Enables Address Sanitizer for all the projects globally.
-if(ASAN)
+if (ASAN)
     message(STATUS "Turning on Address Sanitizer for Debug Builds")
-    if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:/fsanitize=address;/Zi>)
         target_link_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
-    else()
+    else ()
         target_compile_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:-fsanitize=address;-fno-omit-frame-pointer>)
         target_link_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:-fsanitize=address>)
-    endif()
-endif()
+    endif ()
+endif ()
 
 # Multi-processor compilation
-if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(STATUS "Enabling Multiprocessor compilation on MSVC")
     add_compile_options("/MP")
-endif()
+endif ()
 
 include(dependencies.cmake)
 
 add_subdirectory(test-suite)
 add_subdirectory(benchmark-suite)
 add_subdirectory(application)
-
 
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT TestSuite)

@@ -11,19 +11,20 @@ list(TRANSFORM SrcFiles PREPEND ${SourceDir})
 
 
 target_sources(
-    VulkanEngine
-    PRIVATE
-    ${SrcFiles}
+        VulkanEngine
+        PRIVATE
+        ${SrcFiles}
 )
 
 target_include_directories(VulkanEngine PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 
 target_link_libraries(
-    VulkanEngine
-    PRIVATE
-    StrictWarnings
-    SDL3::SDL3-static
+        VulkanEngine
+        PRIVATE
+        StrictWarnings
+        SDL3::SDL3-static
+        ${Vulkan_LIBRARIES}
 )
