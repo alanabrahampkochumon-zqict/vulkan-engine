@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+#include <cstdlib>
 #include <exception>
 #include <vulkan/vulkan.h>
 
@@ -12,31 +13,35 @@ class HelloTriangleApplication
 public:
     void run()
     {
+        initWindow();
         initVulkan();
         mainLoop();
         cleanUp();
     }
 
 private:
+    void initWindow()
+    {
+        SDL_SetAppMetadata(APP_NAME, APP_VERSION, APP_ID);
+        if (!SDL_Init(SDL_INIT_VIDEO))
+            throw std::exception("There was an error initializing the Window"); // TODO: Strip down exceptions
+
+        _window = SDL_CreateWindow(APP_NAME, WIDTH, HEIGHT, 0);
+    }
+
     void initVulkan() {}
     void mainLoop() {}
-    void cleanUp() {}
+    void cleanUp() { SDL_DestroyWindow(_window); }
+
+private:
+    SDL_Window* _window{ nullptr };
+    static constexpr size_t WIDTH  = 1280;
+    static constexpr size_t HEIGHT = 720;
 };
 
 int main()
 {
-    // Set the application metadata
-    // SDL_SetAppMetadata(APP_NAME, APP_VERSION, APP_ID);
-    // SDL_Log("Hello, world!");
-    // if (!SDL_Init(SDL_INIT_VIDEO))
-    //     SDL_Log("There was an error initializing SDL");
-    // SDL_Window* window = SDL_CreateWindow(APP_NAME, 1280, 720, 0);
-    //
-    //
-    // // Cleanup
-    // SDL_DestroyWindow(window);
-
-    HelloTriangleApplication app;
+    HelloTriangleApplication app{};
 
     try
     {
