@@ -104,6 +104,7 @@ include(dependencies.cmake)
 
 add_subdirectory(test-suite)
 add_subdirectory(benchmark-suite)
+add_subdirectory(application)
 
 
 
