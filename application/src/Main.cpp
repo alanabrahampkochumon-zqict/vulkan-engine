@@ -87,8 +87,19 @@ private:
         uint32_t instanceExtensionCount       = 0;
         const char* const* instanceExtensions = SDL_Vulkan_GetInstanceExtensions(&instanceExtensionCount);
 
-        createInfo.enabledExtensionCount   = instanceExtensionCount;
-        createInfo.ppEnabledExtensionNames = instanceExtensions;
+        // Add Portability KHR extension for macOS
+        std::vector<const char*> requiredExtensions;
+        for (uint32_t i = 0; i < instanceExtensionCount; ++i)
+            requiredExtensions.emplace_back(instanceExtensions[i]);
+
+#if defined(__APPLE__) && defined(__MACH__)
+        // MacOS Specific
+        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+        createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
+
+        createInfo.enabledExtensionCount   = static_cast<uint32_t>(requiredExtensions.size());
+        createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
         createInfo.enabledExtensionCount = 0;
 
