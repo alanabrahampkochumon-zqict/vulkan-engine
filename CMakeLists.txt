@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(GenericProject LANGUAGES CXX)
+project(VulkanEngine LANGUAGES CXX)
 enable_testing()
 
 
