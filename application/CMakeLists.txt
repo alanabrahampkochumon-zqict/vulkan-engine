@@ -1,5 +1,5 @@
 add_executable(VulkanEngine)
-target_compile_features(VulkanEngine PUBLIC cxx_std_20)
+target_compile_features(VulkanEngine PUBLIC cxx_std_23)
 
 #Directories
 set(SourceDir "src/")

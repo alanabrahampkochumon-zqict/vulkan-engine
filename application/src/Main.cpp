@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <print>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 
@@ -32,7 +34,11 @@ private:
         _window = SDL_CreateWindow(APP_NAME, WIDTH, HEIGHT, 0);
     }
 
-    void initVulkan() { createInstance(); }
+    void initVulkan()
+    {
+        createInstance();
+        queryAvailableExtensions();
+    }
 
     void mainLoop()
     {
@@ -93,6 +99,23 @@ private:
             SDL_Log("Initialized Vulkan!");
         else
             SDL_Log("There was an error creating the Vulkan instance.");
+    }
+
+    void queryAvailableExtensions()
+    {
+        uint32_t numExtensions{};
+        // query the number of extensions
+        vkEnumerateInstanceExtensionProperties(nullptr, &numExtensions, nullptr);
+        std::vector<VkExtensionProperties> extensions(numExtensions);
+
+        // Query the extensions
+        vkEnumerateInstanceExtensionProperties(nullptr, &numExtensions, extensions.data());
+
+        std::println("Supported extensions: ");
+        for (const auto& extension : extensions)
+        {
+            std::println("\t{}", extension.extensionName);
+        }
     }
 
 private:
