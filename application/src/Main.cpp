@@ -2,6 +2,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <print>
 #include <vector>
@@ -59,10 +60,22 @@ private:
         }
     }
 
-    void cleanUp() { SDL_DestroyWindow(_window); }
+    void cleanUp()
+    {
+        vkDestroyInstance(_vkInstance, nullptr);
+        SDL_DestroyWindow(_window);
+    }
 
     void createInstance()
     {
+// Enable Validation only in Debug mode
+#ifdef NDEBUG
+        const bool enableValidation = false;
+#else
+        const bool enableValidation = true;
+#endif
+
+
         // Optional information added for optimization
         VkApplicationInfo appInfo{};                        // Initializes pNext to nullptr (extension information)
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO; // sType needs to be specified
@@ -87,11 +100,16 @@ private:
         uint32_t instanceExtensionCount       = 0;
         const char* const* instanceExtensions = SDL_Vulkan_GetInstanceExtensions(&instanceExtensionCount);
 
-        // Add Portability KHR extension for macOS
         std::vector<const char*> requiredExtensions;
         for (uint32_t i = 0; i < instanceExtensionCount; ++i)
             requiredExtensions.emplace_back(instanceExtensions[i]);
 
+        if (enableValidation)
+        {
+            requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
+
+        // Required on macOS which will give the `VK_ERROR_INCOMPATIBLE_DRIVER` when creating vkInstance
 #if defined(__APPLE__) && defined(__MACH__)
         // MacOS Specific
         requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
@@ -101,15 +119,59 @@ private:
         createInfo.enabledExtensionCount   = static_cast<uint32_t>(requiredExtensions.size());
         createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
-        createInfo.enabledExtensionCount = 0;
+
+        //////  Validation Layer Enabling
+        std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+
+        // Check for validation
+        if (enableValidation && !queryExtensionAvailability(validationLayers))
+        {
+            throw std::runtime_error("Validation layers requested but not supported!");
+        }
+        if (enableValidation)
+        {
+            // Enable validation
+            createInfo.enabledLayerCount   = validationLayers.size();
+            createInfo.ppEnabledLayerNames = validationLayers.data();
+        }
+        else
+        {
+            createInfo.enabledLayerCount = 0;
+        }
+        SDL_Log("Enabled Vulkan Validation Layer!");
 
         // Create the vulkan instance
-        VkResult result = vkCreateInstance(&createInfo, nullptr, &_vkInstance);
-
-        if (result == VK_SUCCESS)
+        if (vkCreateInstance(&createInfo, nullptr, &_vkInstance) == VK_SUCCESS)
             SDL_Log("Initialized Vulkan!");
         else
             SDL_Log("There was an error creating the Vulkan instance.");
+    }
+
+    inline void setupValidationLayer(VkInstanceCreateInfo& instanceInfo) {}
+
+    bool queryExtensionAvailability(const std::vector<const char*>& layers)
+    {
+        uint32_t numLayers{};
+        vkEnumerateInstanceLayerProperties(&numLayers, nullptr);
+        std::vector<VkLayerProperties> availableLayers(numLayers);
+        vkEnumerateInstanceLayerProperties(&numLayers, availableLayers.data());
+
+        bool layerAvailable = false;
+
+        for (const auto& targetLayer : layers)
+        {
+            for (const auto& availableLayer : availableLayers)
+            {
+                if (strcmp(targetLayer, availableLayer.layerName) == 0)
+                {
+                    layerAvailable = true;
+                    break;
+                }
+            }
+            if (!layerAvailable)
+                return false;
+        }
+        return true;
     }
 
     void queryAvailableExtensions()
@@ -123,10 +185,20 @@ private:
         vkEnumerateInstanceExtensionProperties(nullptr, &numExtensions, extensions.data());
 
         std::println("Supported extensions: ");
-        for (const auto& extension : extensions)
+        for (const auto& [extensionName, specVersion] : extensions)
         {
-            std::println("\t{}", extension.extensionName);
+            std::println("\t{}", extensionName);
         }
+    }
+
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                        VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                                        void* pUserData)
+    {
+        if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+            SDL_Log("[Vulkan Validation]: %s", pCallbackData->pMessage);
+        return VK_FALSE;
     }
 
 private:
