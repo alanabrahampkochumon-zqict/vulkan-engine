@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <map>
 #include <print>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -184,17 +185,57 @@ private:
         if (numDevices == 0)
             throw std::runtime_error("No devices with vulkan support present");
 
-        std::vector<VkPhysicalDevice> physicalDevices;
+        std::vector<VkPhysicalDevice> physicalDevices(numDevices);
         vkEnumeratePhysicalDevices(_vkInstance, &numDevices, physicalDevices.data());
 
-        for (const auto device : physicalDevices)
-            isDeviceSuitable(device);
+        std::multimap<int, VkPhysicalDevice> candidateDevices;
+
+        // Associating each device with a score based on our requirements
+        for (const auto& device : physicalDevices)
+        {
+            int score = rateDeviceSuitability(device);
+            candidateDevices.insert(std::make_pair(score, device));
+        }
+
+        // Check if the candidate gpu supports our required features
+        // Since we are using a reverse iterator, we will get the GPU with the largest score
+        if (candidateDevices.rbegin()->first > 0)
+        {
+            physicalDevice = candidateDevices.rbegin()->second;
+        }
+        else
+        {
+            throw std::runtime_error("Failed to find a suitable GPU!");
+        }
+    }
+
+    int rateDeviceSuitability(VkPhysicalDevice device)
+    {
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+        VkPhysicalDeviceFeatures deviceFeatures;
+        vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+        int score = 0;
+
+        // Huge score increment to separate discrete from integrate GPU
+        score += deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 1000 : 0;
+
+        // Max texture size
+        score += deviceProperties.limits.maxImageDimension2D;
+
+        // Don't support GPU that don't have a geometry shader
+        if (!deviceFeatures.geometryShader)
+            return 0;
+
+        return score;
     }
 
     /**
      * @brief Returns if a vulkan device(GPU) matches our criteria.
      */
-    bool isDeviceSuitable(VkPhysicalDevice device)
+    [[maybe_unused]] bool isDeviceSuitable(VkPhysicalDevice device)
     {
         // Query basic features like name, type, vulkan version
         VkPhysicalDeviceProperties deviceProperties;
