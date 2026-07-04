@@ -21,6 +21,7 @@ public:
     {
         initWindow();
         initVulkan();
+        setupDebugMessenger();
         mainLoop();
         cleanUp();
     }
@@ -62,6 +63,9 @@ private:
 
     void cleanUp()
     {
+        if (_enabledValidationLayers)
+            DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
+
         vkDestroyInstance(_vkInstance, nullptr);
         SDL_DestroyWindow(_window);
     }
@@ -71,8 +75,10 @@ private:
 // Enable Validation only in Debug mode
 #ifdef NDEBUG
         const bool enableValidation = false;
+        _enabledValidationLayers    = false;
 #else
         const bool enableValidation = true;
+        _enabledValidationLayers    = true;
 #endif
 
 
@@ -147,7 +153,47 @@ private:
             SDL_Log("There was an error creating the Vulkan instance.");
     }
 
-    inline void setupValidationLayer(VkInstanceCreateInfo& instanceInfo) {}
+    void setupDebugMessenger()
+    {
+        if (!_enabledValidationLayers)
+            return;
+
+        // Create messenger create info
+        VkDebugUtilsMessengerCreateInfoEXT messengerCreateInfo;
+        messengerCreateInfo.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        messengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        messengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        messengerCreateInfo.pfnUserCallback = debugCallback;
+        messengerCreateInfo.flags           = 0;       // Flags must be zero
+        messengerCreateInfo.pUserData       = nullptr; // User data
+
+        if (CreateDebugUtilsMessengerEXT(_vkInstance, &messengerCreateInfo, nullptr, &_debugMessenger) != VK_SUCCESS)
+            throw std::runtime_error("Failed to set up debug messenger");
+    }
+
+    VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+                                          const VkAllocationCallbacks* pAllocator,
+                                          VkDebugUtilsMessengerEXT* pDebugMessenger)
+    {
+        auto func =
+            (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+        if (func != nullptr)
+        {
+            return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+        }
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+
+    void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+                                       const VkAllocationCallbacks* pAllocator)
+    {
+        auto func =
+            (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+        if (func != nullptr)
+            func(instance, debugMessenger, pAllocator);
+    }
 
     bool queryExtensionAvailability(const std::vector<const char*>& layers)
     {
@@ -196,8 +242,7 @@ private:
                                                         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                         void* pUserData)
     {
-        if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-            SDL_Log("[Vulkan Validation]: %s", pCallbackData->pMessage);
+        SDL_Log("[Vulkan Validation]: %s", pCallbackData->pMessage);
         return VK_FALSE;
     }
 
@@ -208,7 +253,9 @@ private:
 
     bool _gameRunning{ true };
 
+    bool _enabledValidationLayers{ false };
     VkInstance _vkInstance{};
+    VkDebugUtilsMessengerEXT _debugMessenger{};
 };
 
 int main()
