@@ -21,7 +21,6 @@ public:
     {
         initWindow();
         initVulkan();
-        setupDebugMessenger();
         mainLoop();
         cleanUp();
     }
@@ -40,6 +39,8 @@ private:
     {
         createInstance();
         queryAvailableExtensions();
+        setupDebugMessenger();
+        pickPhysicalDevice();
     }
 
     void mainLoop()
@@ -172,6 +173,45 @@ private:
         if (CreateDebugUtilsMessengerEXT(_vkInstance, &messengerCreateInfo, nullptr, &_debugMessenger) != VK_SUCCESS)
             throw std::runtime_error("Failed to set up debug messenger");
     }
+
+    void pickPhysicalDevice()
+    {
+        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        uint32_t numDevices{};
+
+        vkEnumeratePhysicalDevices(_vkInstance, &numDevices, nullptr);
+
+        if (numDevices == 0)
+            throw std::runtime_error("No devices with vulkan support present");
+
+        std::vector<VkPhysicalDevice> physicalDevices;
+        vkEnumeratePhysicalDevices(_vkInstance, &numDevices, physicalDevices.data());
+
+        for (const auto device : physicalDevices)
+            isDeviceSuitable(device);
+    }
+
+    /**
+     * @brief Returns if a vulkan device(GPU) matches our criteria.
+     */
+    bool isDeviceSuitable(VkPhysicalDevice device)
+    {
+        // Query basic features like name, type, vulkan version
+        VkPhysicalDeviceProperties deviceProperties;
+        vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+        // Query optional features like texture compression, 64-bit floats etc.
+        VkPhysicalDeviceFeatures deviceFeatures;
+        vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+        SDL_Log("Device Found!\n %s", deviceProperties.deviceName);
+
+        // Only support Discrete GPU and ones that have a geometry shader
+        return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
+    }
+
+
+
 
     VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
                                           const VkAllocationCallbacks* pAllocator,
