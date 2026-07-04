@@ -5,6 +5,7 @@
 #include <cstring>
 #include <exception>
 #include <map>
+#include <optional>
 #include <print>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -13,6 +14,16 @@
 static auto APP_NAME    = "Vulkan Renderer";
 static auto APP_ID      = "com.alan.vulkan_renderer";
 static auto APP_VERSION = "1.0.0";
+
+struct QueueFamilyIndices
+{
+    std::optional<uint32_t> graphicsFamily{ std::nullopt };
+
+    /**
+     * @brief Returns whether the current queue family has a device feature set.
+     */
+    bool isComplete() { return graphicsFamily.has_value(); }
+};
 
 
 class HelloTriangleApplication
@@ -232,8 +243,31 @@ private:
         return score;
     }
 
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
+    {
+        QueueFamilyIndices indices;
+
+        uint32_t queueFamiliesCount;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
+
+        std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, queueFamilyProperties.data());
+
+        int i = 0;
+
+        // Find at least one family that supports VK_QUEUE_GRAPHICS_BIT
+        for (const auto& queueFamily : queueFamilyProperties)
+        {
+            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                indices.graphicsFamily = i;
+            ++i;
+        }
+
+        return indices;
+    }
+
     /**
-     * @brief Returns if a vulkan device(GPU) matches our criteria.
+     * @brief Returns if a vulkan device(GPU) has certain feature set like being discrete or having geometry shaders.
      */
     [[maybe_unused]] bool isDeviceSuitable(VkPhysicalDevice device)
     {
@@ -248,7 +282,10 @@ private:
         SDL_Log("Device Found!\n %s", deviceProperties.deviceName);
 
         // Only support Discrete GPU and ones that have a geometry shader
-        return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
+        // return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
+        QueueFamilyIndices indices = findQueueFamilies(device);
+
+        return indices.isComplete();
     }
 
 
