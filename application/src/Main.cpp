@@ -54,6 +54,7 @@ private:
         setupDebugMessenger();
         pickPhysicalDevice();
         createLogicalDevice();
+        createSurface();
     }
 
     void mainLoop()
@@ -77,6 +78,7 @@ private:
 
     void cleanUp()
     {
+        vkDestroySurfaceKHR(_vkInstance, _vkSurface, nullptr);
         vkDestroyDevice(_vkDevice, nullptr);
 
         if (_enabledValidationLayers)
@@ -187,6 +189,12 @@ private:
 
         if (CreateDebugUtilsMessengerEXT(_vkInstance, &messengerCreateInfo, nullptr, &_debugMessenger) != VK_SUCCESS)
             throw std::runtime_error("Failed to set up debug messenger");
+    }
+
+    void createSurface()
+    {
+        if (SDL_Vulkan_CreateSurface(_window, _vkInstance, nullptr, &_vkSurface) != VK_SUCCESS)
+            throw std::runtime_error("There was an error creating a rendering surface!");
     }
 
     void createLogicalDevice()
@@ -433,6 +441,7 @@ private:
     VkPhysicalDevice _physicalDevice{ VK_NULL_HANDLE };
     VkDevice _vkDevice{};
     VkQueue _graphicsQueue{};
+    VkSurfaceKHR _vkSurface{};
 };
 
 int main()
