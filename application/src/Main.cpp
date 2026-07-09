@@ -143,7 +143,7 @@ private:
         std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
 
         // Check for validation
-        if (enableValidation && !queryExtensionAvailability(validationLayers))
+        if (enableValidation && !queryLayerAvailability(validationLayers))
         {
             throw std::runtime_error("Validation layers requested but not supported!");
         }
@@ -250,7 +250,7 @@ private:
         uint32_t queueFamiliesCount;
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
 
-        std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+        std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamiliesCount);
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, queueFamilyProperties.data());
 
         int i = 0;
@@ -313,7 +313,7 @@ private:
             func(instance, debugMessenger, pAllocator);
     }
 
-    bool queryExtensionAvailability(const std::vector<const char*>& layers)
+    bool queryLayerAvailability(const std::vector<const char*>& layers)
     {
         uint32_t numLayers{};
         vkEnumerateInstanceLayerProperties(&numLayers, nullptr);
