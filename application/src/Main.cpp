@@ -18,11 +18,12 @@ static auto APP_VERSION = "1.0.0";
 struct QueueFamilyIndices
 {
     std::optional<uint32_t> graphicsFamily{ std::nullopt };
+    std::optional<uint32_t> presentFamily{ std::nullopt }; // Queue for presenting image to surface
 
     /**
      * @brief Returns whether the current queue family has a device feature set.
      */
-    bool isComplete() { return graphicsFamily.has_value(); }
+    bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
 };
 
 
@@ -326,6 +327,14 @@ private:
             if (indices.isComplete())
                 break;
         }
+
+        /////////////////////////////////
+        /// FINDING PRESENTING SUPPORT //
+        ////////////////////////////////
+        VkBool32 presentFamily;
+        vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _vkSurface, &presentFamily);
+        if (presentFamily)
+            indices.presentFamily = i; // Might return the same queue(one queue with both graphics and present support)
 
         return indices;
     }
