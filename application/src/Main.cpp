@@ -53,6 +53,7 @@ private:
         queryAvailableExtensions();
         setupDebugMessenger();
         pickPhysicalDevice();
+        createLogicalDevice();
     }
 
     void mainLoop()
@@ -76,6 +77,8 @@ private:
 
     void cleanUp()
     {
+        vkDestroyDevice(_vkDevice, nullptr);
+
         if (_enabledValidationLayers)
             DestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger, nullptr);
 
@@ -186,9 +189,57 @@ private:
             throw std::runtime_error("Failed to set up debug messenger");
     }
 
+    void createLogicalDevice()
+    {
+        QueueFamilyIndices familyIndices = findQueueFamilies(_physicalDevice);
+        float queuePriority              = 1.0f; // Must specify a priority even if its the one queue
+
+        // Used Device features
+        VkPhysicalDeviceFeatures physicalDeviceFeatures;
+
+
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+
+        // Create 1 Graphics Family Queue
+        queueCreateInfo.queueFamilyIndex = familyIndices.graphicsFamily.value();
+        queueCreateInfo.queueCount       = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+
+        // Create Device create info for creating the logical device
+        // with the required queue family
+        VkDeviceCreateInfo deviceCreateInfo{};
+        deviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        deviceCreateInfo.pQueueCreateInfos    = &queueCreateInfo;
+        deviceCreateInfo.queueCreateInfoCount = 1;
+
+        deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
+
+        // Enable validation layer(@note: Deprecated)
+        deviceCreateInfo.enabledExtensionCount = 0;
+
+        auto validationLayers = std::vector{ "VK_LAYER_KHRONOS_validation" };
+
+        if (_enabledValidationLayers)
+        {
+            deviceCreateInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
+            deviceCreateInfo.ppEnabledLayerNames = validationLayers.data();
+        }
+        else
+        {
+            deviceCreateInfo.enabledLayerCount = 0;
+        }
+
+        // Instantiate Logical Device
+        if (vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_vkDevice) != VK_SUCCESS)
+            throw std::runtime_error("There was an error creating a vulkan logical device");
+
+        // Queue are creating along with logical devices
+        vkGetDeviceQueue(_vkDevice, familyIndices.graphicsFamily.value(), 0, &_graphicsQueue);
+    }
+
     void pickPhysicalDevice()
     {
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         uint32_t numDevices{};
 
         vkEnumeratePhysicalDevices(_vkInstance, &numDevices, nullptr);
@@ -212,7 +263,7 @@ private:
         // Since we are using a reverse iterator, we will get the GPU with the largest score
         if (candidateDevices.rbegin()->first > 0)
         {
-            physicalDevice = candidateDevices.rbegin()->second;
+            _physicalDevice = candidateDevices.rbegin()->second;
         }
         else
         {
@@ -259,8 +310,13 @@ private:
         for (const auto& queueFamily : queueFamilyProperties)
         {
             if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
                 indices.graphicsFamily = i;
+            }
             ++i;
+
+            if (indices.isComplete())
+                break;
         }
 
         return indices;
@@ -374,6 +430,9 @@ private:
     bool _enabledValidationLayers{ false };
     VkInstance _vkInstance{};
     VkDebugUtilsMessengerEXT _debugMessenger{};
+    VkPhysicalDevice _physicalDevice{ VK_NULL_HANDLE };
+    VkDevice _vkDevice{};
+    VkQueue _graphicsQueue{};
 };
 
 int main()
