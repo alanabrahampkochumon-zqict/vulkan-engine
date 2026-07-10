@@ -46,7 +46,7 @@ private:
         if (!SDL_Init(SDL_INIT_VIDEO))
             throw std::exception("There was an error initializing the Window"); // TODO: Strip down exceptions
 
-        _window = SDL_CreateWindow(APP_NAME, WIDTH, HEIGHT, 0);
+        _window = SDL_CreateWindow(APP_NAME, WIDTH, HEIGHT, SDL_WINDOW_VULKAN);
     }
 
     void initVulkan()
@@ -54,9 +54,9 @@ private:
         createInstance();
         queryAvailableExtensions();
         setupDebugMessenger();
+        createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
-        createSurface();
     }
 
     void mainLoop()
@@ -97,7 +97,7 @@ private:
         const bool enableValidation = false;
         _enabledValidationLayers    = false;
 #else
-        const bool enableValidation = true;
+        constexpr bool enableValidation = true;
         _enabledValidationLayers    = true;
 #endif
 
@@ -195,7 +195,7 @@ private:
 
     void createSurface()
     {
-        if (SDL_Vulkan_CreateSurface(_window, _vkInstance, nullptr, &_vkSurface) != VK_SUCCESS)
+        if (!SDL_Vulkan_CreateSurface(_window, _vkInstance, nullptr, &_vkSurface) != VK_SUCCESS)
             throw std::runtime_error("There was an error creating a rendering surface!");
     }
 
@@ -205,7 +205,7 @@ private:
         float queuePriority              = 1.0f; // Must specify a priority even if it's the one queue
 
         // Used Device features
-        VkPhysicalDeviceFeatures physicalDeviceFeatures;
+        VkPhysicalDeviceFeatures physicalDeviceFeatures{}; //NOTE: Always empty initialize else the prog will crash
 
         std::set<uint32_t> queueFamilies = { familyIndices.graphicsFamily.value(),
                                              familyIndices.presentFamily.value() };
@@ -228,23 +228,8 @@ private:
         deviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         deviceCreateInfo.pQueueCreateInfos    = queueCreateInfos.data();
         deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-
         deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
-
-        // Enable validation layer(@note: Deprecated)
-        deviceCreateInfo.enabledExtensionCount = 0;
-
-        auto validationLayers = std::vector{ "VK_LAYER_KHRONOS_validation" };
-
-        if (_enabledValidationLayers)
-        {
-            deviceCreateInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
-            deviceCreateInfo.ppEnabledLayerNames = validationLayers.data();
-        }
-        else
-        {
-            deviceCreateInfo.enabledLayerCount = 0;
-        }
+        deviceCreateInfo.enabledLayerCount = 0;
 
         // Instantiate Logical Device
         if (vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_vkDevice) != VK_SUCCESS)
@@ -272,23 +257,29 @@ private:
         // Associating each device with a score based on our requirements
         for (const auto& device : physicalDevices)
         {
-            int score = rateDeviceSuitability(device);
-            candidateDevices.insert(std::make_pair(score, device));
+            // Use the first suitable device
+            if (isDeviceSuitable(device))
+            {
+                _physicalDevice = device;
+                break;
+            }
+            // int score = rateDeviceSuitability(device);
+            // candidateDevices.insert(std::make_pair(score, device));
         }
 
         // Check if the candidate gpu supports our required features
         // Since we are using a reverse iterator, we will get the GPU with the largest score
-        if (candidateDevices.rbegin()->first > 0)
-        {
-            _physicalDevice = candidateDevices.rbegin()->second;
-        }
-        else
-        {
-            throw std::runtime_error("Failed to find a suitable GPU!");
-        }
+        // if (candidateDevices.rbegin()->first > 0)
+        // {
+        //     _physicalDevice = candidateDevices.rbegin()->second;
+        // }
+        // else
+        // {
+        //     throw std::runtime_error("Failed to find a suitable GPU!");
+        // }
     }
 
-    int rateDeviceSuitability(VkPhysicalDevice device)
+    [[maybe_unused]] int rateDeviceSuitability(VkPhysicalDevice device)
     {
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -311,7 +302,7 @@ private:
         return score;
     }
 
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
+    QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice device) const
     {
         QueueFamilyIndices indices;
 
@@ -329,18 +320,19 @@ private:
             if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
                 indices.graphicsFamily = i;
+                break;
             }
             ++i;
 
-            if (indices.isComplete())
-                break;
+            // if (indices.isComplete())
+            //     break;
         }
 
         /////////////////////////////////
         /// FINDING PRESENTING SUPPORT //
         /////////////////////////////////
         VkBool32 presentFamily;
-        vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _vkSurface, &presentFamily);
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _vkSurface, &presentFamily);
         if (presentFamily)
             indices.presentFamily = i; // Might return the same queue(one queue with both graphics and present support)
 
@@ -350,7 +342,7 @@ private:
     /**
      * @brief Returns if a vulkan device(GPU) has certain feature set like being discrete or having geometry shaders.
      */
-    [[maybe_unused]] bool isDeviceSuitable(VkPhysicalDevice device)
+    bool isDeviceSuitable(VkPhysicalDevice device)
     {
         // Query basic features like name, type, vulkan version
         VkPhysicalDeviceProperties deviceProperties;
@@ -441,7 +433,12 @@ private:
                                                         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                         void* pUserData)
     {
-        SDL_Log("[Vulkan Validation]: %s", pCallbackData->pMessage);
+        if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "[Vulkan Validation]: (ERROR) %s", pCallbackData->pMessage);
+        else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "[Vulkan Validation]: (WARNING) %s", pCallbackData->pMessage);
+        else
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "[Vulkan Validation]: %s", pCallbackData->pMessage);
         return VK_FALSE;
     }
 
