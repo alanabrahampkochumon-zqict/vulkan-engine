@@ -7,6 +7,7 @@
 #include <map>
 #include <optional>
 #include <print>
+#include <set>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -201,26 +202,32 @@ private:
     void createLogicalDevice()
     {
         QueueFamilyIndices familyIndices = findQueueFamilies(_physicalDevice);
-        float queuePriority              = 1.0f; // Must specify a priority even if its the one queue
+        float queuePriority              = 1.0f; // Must specify a priority even if it's the one queue
 
         // Used Device features
         VkPhysicalDeviceFeatures physicalDeviceFeatures;
 
+        std::set<uint32_t> queueFamilies = { familyIndices.graphicsFamily.value(),
+                                             familyIndices.presentFamily.value() };
+        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+        for (auto& queueFamily : queueFamilies)
+        {
+            VkDeviceQueueCreateInfo queueCreateInfo{};
+            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            // Create a single Queue for each type of queue we want
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.queueCount       = 1;
+            queueCreateInfo.pQueuePriorities = &queuePriority;
 
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-
-        // Create 1 Graphics Family Queue
-        queueCreateInfo.queueFamilyIndex = familyIndices.graphicsFamily.value();
-        queueCreateInfo.queueCount       = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
+            queueCreateInfos.push_back(queueCreateInfo);
+        }
 
         // Create Device create info for creating the logical device
         // with the required queue family
         VkDeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        deviceCreateInfo.pQueueCreateInfos    = &queueCreateInfo;
-        deviceCreateInfo.queueCreateInfoCount = 1;
+        deviceCreateInfo.pQueueCreateInfos    = queueCreateInfos.data();
+        deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 
         deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
 
@@ -245,6 +252,7 @@ private:
 
         // Queue are creating along with logical devices
         vkGetDeviceQueue(_vkDevice, familyIndices.graphicsFamily.value(), 0, &_graphicsQueue);
+        vkGetDeviceQueue(_vkDevice, familyIndices.presentFamily.value(), 0, &_presentQueue);
     }
 
     void pickPhysicalDevice()
@@ -330,7 +338,7 @@ private:
 
         /////////////////////////////////
         /// FINDING PRESENTING SUPPORT //
-        ////////////////////////////////
+        /////////////////////////////////
         VkBool32 presentFamily;
         vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _vkSurface, &presentFamily);
         if (presentFamily)
@@ -449,7 +457,7 @@ private:
     VkDebugUtilsMessengerEXT _debugMessenger{};
     VkPhysicalDevice _physicalDevice{ VK_NULL_HANDLE };
     VkDevice _vkDevice{};
-    VkQueue _graphicsQueue{};
+    VkQueue _graphicsQueue{}, _presentQueue{};
     VkSurfaceKHR _vkSurface{};
 };
 
