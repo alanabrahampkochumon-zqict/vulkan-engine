@@ -98,7 +98,7 @@ private:
         _enabledValidationLayers    = false;
 #else
         constexpr bool enableValidation = true;
-        _enabledValidationLayers    = true;
+        _enabledValidationLayers        = true;
 #endif
 
 
@@ -205,7 +205,7 @@ private:
         float queuePriority              = 1.0f; // Must specify a priority even if it's the one queue
 
         // Used Device features
-        VkPhysicalDeviceFeatures physicalDeviceFeatures{}; //NOTE: Always empty initialize else the prog will crash
+        VkPhysicalDeviceFeatures physicalDeviceFeatures{}; // NOTE: Always empty initialize else the prog will crash
 
         std::set<uint32_t> queueFamilies = { familyIndices.graphicsFamily.value(),
                                              familyIndices.presentFamily.value() };
@@ -228,8 +228,8 @@ private:
         deviceCreateInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         deviceCreateInfo.pQueueCreateInfos    = queueCreateInfos.data();
         deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-        deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
-        deviceCreateInfo.enabledLayerCount = 0;
+        deviceCreateInfo.pEnabledFeatures     = &physicalDeviceFeatures;
+        deviceCreateInfo.enabledLayerCount    = 0;
 
         // Instantiate Logical Device
         if (vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_vkDevice) != VK_SUCCESS)
@@ -344,6 +344,7 @@ private:
      */
     bool isDeviceSuitable(VkPhysicalDevice device)
     {
+
         // Query basic features like name, type, vulkan version
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -358,7 +359,31 @@ private:
         // return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
         QueueFamilyIndices indices = findQueueFamilies(device);
 
-        return indices.isComplete();
+        return indices.isComplete() && checkDeviceExtensionSupport(device);
+    }
+
+
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device)
+    {
+        // Query the available extensions
+        uint32_t numExtensions;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &numExtensions, nullptr);
+
+        std::vector<VkExtensionProperties> availableExtensions(numExtensions);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &numExtensions, availableExtensions.data());
+
+        // Form a set to store our required extensions
+        std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+        // Every time our required extension is in the devices supported extension list
+        // remove it
+        for (const auto& [extensionName, specVersion] : availableExtensions)
+        {
+            requiredExtensions.erase(extensionName);
+        }
+
+        // Return true if all our mandatory extensions are supported
+        return requiredExtensions.empty();
     }
 
 
@@ -456,6 +481,11 @@ private:
     VkDevice _vkDevice{};
     VkQueue _graphicsQueue{}, _presentQueue{};
     VkSurfaceKHR _vkSurface{};
+
+    // Swapchain support
+    std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME // "VK_KHR_swapchain
+    };
 };
 
 int main()
