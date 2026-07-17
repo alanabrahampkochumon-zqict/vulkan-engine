@@ -28,6 +28,14 @@ struct QueueFamilyIndices
 };
 
 
+struct SwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;      /// Min/Max number, width, height of swap chain images.
+    std::vector<VkSurfaceFormatKHR> format;     /// Pixel format, color space etc.
+    std::vector<VkPresentModeKHR> presentModes; /// Presentation Mode
+};
+
+
 class HelloTriangleApplication
 {
 public:
@@ -231,6 +239,10 @@ private:
         deviceCreateInfo.pEnabledFeatures     = &physicalDeviceFeatures;
         deviceCreateInfo.enabledLayerCount    = 0;
 
+        // Enable Swap chain and other layers
+        deviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
+        deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
+
         // Instantiate Logical Device
         if (vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_vkDevice) != VK_SUCCESS)
             throw std::runtime_error("There was an error creating a vulkan logical device");
@@ -359,7 +371,16 @@ private:
         // return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
         QueueFamilyIndices indices = findQueueFamilies(device);
 
-        return indices.isComplete() && checkDeviceExtensionSupport(device);
+        const bool isExtensionSupported = checkDeviceExtensionSupport(device);
+
+        bool isSwapChainSuitable{ false };
+        if (isExtensionSupported)
+        {
+            auto swapChainDetails = querySwapChainSupportDetails(device);
+            isSwapChainSuitable   = !swapChainDetails.presentModes.empty() && !swapChainDetails.format.empty();
+        }
+
+        return indices.isComplete() && isExtensionSupported && isSwapChainSuitable;
     }
 
 
@@ -451,6 +472,38 @@ private:
         {
             std::println("\t{}", extensionName);
         }
+    }
+
+    SwapChainSupportDetails querySwapChainSupportDetails(VkPhysicalDevice device)
+    {
+
+        SwapChainSupportDetails details;
+
+        // Query Device capabilities
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _vkSurface, &details.capabilities);
+
+
+        // Query format count and supported surface formats
+        uint32_t numFormats;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, _vkSurface, &numFormats, nullptr);
+
+        if (numFormats != 0)
+        {
+            details.format.resize(numFormats);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(device, _vkSurface, &numFormats, details.format.data());
+        }
+
+        // Query present modes
+        uint32_t numPresentModes;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, _vkSurface, &numPresentModes, nullptr);
+
+        if (numPresentModes != 0)
+        {
+            details.presentModes.resize(numPresentModes);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(device, _vkSurface, &numPresentModes,
+                                                      details.presentModes.data());
+        }
+        return details;
     }
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
