@@ -90,6 +90,7 @@ private:
 
     void cleanUp()
     {
+        vkDestroySwapchainKHR(_vkDevice, _vkSwapChain, nullptr);
         vkDestroySurfaceKHR(_vkInstance, _vkSurface, nullptr);
         vkDestroyDevice(_vkDevice, nullptr);
 
@@ -375,11 +376,11 @@ private:
 
         // Create swap chain create info
         VkSwapchainCreateInfoKHR swapChainCreateInfo{};
-        swapChainCreateInfo.sType         = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapChainCreateInfo.surface       = _vkSurface;
+        swapChainCreateInfo.sType   = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapChainCreateInfo.surface = _vkSurface;
 
         // Setup the colorspace and image format
-        swapChainCreateInfo.minImageCount = imageCount;
+        swapChainCreateInfo.minImageCount   = imageCount;
         swapChainCreateInfo.imageFormat     = format.format;
         swapChainCreateInfo.imageColorSpace = format.colorSpace;
 
@@ -434,6 +435,16 @@ private:
         {
             throw std::runtime_error("There was an error creating a swapchain");
         }
+
+        // Retrieve the swap chain images
+        uint32_t numImages;
+        vkGetSwapchainImagesKHR(_vkDevice, _vkSwapChain, &numImages, nullptr);
+        _swapChainImages.resize(numImages);
+        vkGetSwapchainImagesKHR(_vkDevice, _vkSwapChain, &numImages, _swapChainImages.data());
+
+        // Store SwapChain format and extent for future use
+        _swapChainExtend = extent;
+        _swapChainFormat = format.format;
     }
 
     VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -675,6 +686,9 @@ private:
     VkQueue _graphicsQueue{}, _presentQueue{};
     VkSurfaceKHR _vkSurface{};
     VkSwapchainKHR _vkSwapChain{};
+    VkFormat _swapChainFormat{};
+    VkExtent2D _swapChainExtend{};
+    std::vector<VkImage> _swapChainImages{};
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
