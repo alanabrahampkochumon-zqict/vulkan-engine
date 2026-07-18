@@ -66,6 +66,7 @@ private:
         createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
+        createSwapChain();
     }
 
     void mainLoop()
@@ -352,6 +353,89 @@ private:
         return indices;
     }
 
+    void createSwapChain()
+    {
+        // Query the swap chain support details
+        SwapChainSupportDetails supportDetails = querySwapChainSupportDetails(_physicalDevice);
+
+        // Choose an apt format, present mode and extent(resolution)
+        VkSurfaceFormatKHR format    = chooseSurfaceFormat(supportDetails.format);
+        VkPresentModeKHR presentMode = choosePresentMode(supportDetails.presentModes);
+        VkExtent2D extent            = chooseSwapExtent(supportDetails.capabilities);
+
+        // At least increment image count by 1 to ensure we don't to wait
+        // for driver to complete its internal operation to get another image.
+        uint32_t imageCount = supportDetails.capabilities.minImageCount + 1;
+
+        // If we however cant have more than the min, clamp it to the max images supported.
+        // Zero => No maximum
+        if (supportDetails.capabilities.minImageCount > 0 && imageCount > supportDetails.capabilities.maxImageCount)
+            imageCount = supportDetails.capabilities.maxImageCount;
+
+
+        // Create swap chain create info
+        VkSwapchainCreateInfoKHR swapChainCreateInfo{};
+        swapChainCreateInfo.sType         = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapChainCreateInfo.surface       = _vkSurface;
+
+        // Setup the colorspace and image format
+        swapChainCreateInfo.minImageCount = imageCount;
+        swapChainCreateInfo.imageFormat     = format.format;
+        swapChainCreateInfo.imageColorSpace = format.colorSpace;
+
+        swapChainCreateInfo.imageArrayLayers = 1; // Doesn't need more than 1 unless for stereoscopic 3D
+        // To render to separate image use `VK_IMAGE_USAGE_TRANSFER_DST_BIT`
+        swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Use the image for direct rendering
+
+        // Setup queue sharing mode
+        QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
+
+
+        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+        // If Graphics family and present families are separate queue, we need to
+        // set image sharing mode to concurrent
+        if (indices.graphicsFamily != indices.presentFamily)
+        {
+            // Shareability without explicit ownership requirements
+            swapChainCreateInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
+            swapChainCreateInfo.queueFamilyIndexCount = 2;
+            swapChainCreateInfo.pQueueFamilyIndices   = queueFamilyIndices;
+        }
+        else
+        {
+            // Set the preset mode to Exclusive
+            // Ownership is exclusive and implicit transfer of ownership is required
+            swapChainCreateInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+            swapChainCreateInfo.queueFamilyIndexCount = 0;       // Optional
+            swapChainCreateInfo.pQueueFamilyIndices   = nullptr; // Optional
+        }
+
+        // Apply no transformation to the swap chain image
+        swapChainCreateInfo.preTransform = supportDetails.capabilities.currentTransform;
+
+        // Setup the present mode
+        swapChainCreateInfo.presentMode = presentMode;
+        swapChainCreateInfo.clipped     = VK_TRUE; // Clip any invisible areas
+
+        // Setup composite transparency (window transparency)
+        swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // No transparency
+
+
+        // Setup the extent
+        swapChainCreateInfo.imageExtent = extent;
+
+        // Pass in the old swap chain
+        swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
+
+
+        // Create the swap chain
+        if (vkCreateSwapchainKHR(_vkDevice, &swapChainCreateInfo, nullptr, &_vkSwapChain) != VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error creating a swapchain");
+        }
+    }
+
     VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
     {
 
@@ -590,6 +674,7 @@ private:
     VkDevice _vkDevice{};
     VkQueue _graphicsQueue{}, _presentQueue{};
     VkSurfaceKHR _vkSurface{};
+    VkSwapchainKHR _vkSwapChain{};
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
