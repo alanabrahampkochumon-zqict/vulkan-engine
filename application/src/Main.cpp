@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -350,6 +351,61 @@ private:
 
         return indices;
     }
+
+    VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+    {
+
+        // If we support an srgb 32-bit color format
+        // choose it
+        for (auto& format : availableFormats)
+        {
+            if (format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR && format.format == VK_FORMAT_B8G8R8A8_SRGB)
+                return format;
+        }
+
+        // If not choose the first color format supported
+        return availableFormats[0];
+    }
+
+    VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availableModes)
+    {
+        // Choose the mailbox present mode if possible for minimal latency
+        for (auto& mode : availableModes)
+        {
+            if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+                return mode;
+        }
+
+        // IF not supported fall back to FIFO which is guaranteed to be supported
+        return VK_PRESENT_MODE_FIFO_KHR;
+    }
+
+
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+    {
+        // Resolution
+        // If the swap chain has no maximum extent return it(essentially equal to uint32_t's max value
+        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+        {
+            return capabilities.currentExtent;
+        }
+
+
+        // Else get the window height and width and clamp it between the swap chain's min and max extent.
+
+        int width, height;
+        SDL_GetWindowSizeInPixels(_window, &width, &height);
+
+        VkExtent2D actualExtent = { .width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height) };
+
+        actualExtent.width =
+            std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+        actualExtent.height =
+            std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+        return actualExtent;
+    }
+
 
     /**
      * @brief Returns if a vulkan device(GPU) has certain feature set like being discrete or having geometry shaders.
