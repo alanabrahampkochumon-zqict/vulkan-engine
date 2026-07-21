@@ -67,6 +67,7 @@ private:
         pickPhysicalDevice();
         createLogicalDevice();
         createSwapChain();
+        createImageViews();
     }
 
     void mainLoop()
@@ -90,6 +91,9 @@ private:
 
     void cleanUp()
     {
+        for (const auto& swapChainImageView : _swapChainImageViews)
+            vkDestroyImageView(_vkDevice, swapChainImageView, nullptr);
+
         vkDestroySwapchainKHR(_vkDevice, _vkSwapChain, nullptr);
         vkDestroySurfaceKHR(_vkInstance, _vkSurface, nullptr);
         vkDestroyDevice(_vkDevice, nullptr);
@@ -183,6 +187,44 @@ private:
         else
             SDL_Log("There was an error creating the Vulkan instance.");
     }
+
+
+    void createImageViews()
+    {
+        // Resize the imageviews container to be the size of retrieved images
+        _swapChainImageViews.resize(_swapChainImages.size());
+
+        // Loop through each images and create an imageview for each
+        for (std::size_t i = 0; i < _swapChainImages.size(); ++i)
+        {
+            VkImageViewCreateInfo imageViewCreateInfo{};
+            imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            imageViewCreateInfo.image = _swapChainImages[i];
+
+            imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // Type of image, 1D, 2D, 3D, Cube map
+            imageViewCreateInfo.format   = _swapChainFormat;
+
+            // Apply no color channel swizzling
+            imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+            // Specify images purpose and which part of image should be accessed
+            imageViewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            imageViewCreateInfo.subresourceRange.baseMipLevel   = 0;
+            imageViewCreateInfo.subresourceRange.levelCount     = 1;
+            imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+            imageViewCreateInfo.subresourceRange.layerCount     = 1;
+
+            // Create the image view
+            if (vkCreateImageView(_vkDevice, &imageViewCreateInfo, nullptr, &_swapChainImageViews[i]) != VK_SUCCESS)
+            {
+                throw std::runtime_error("There was an error creating the swapchain ImageView!");
+            }
+        }
+    }
+
 
     void setupDebugMessenger()
     {
@@ -689,6 +731,7 @@ private:
     VkFormat _swapChainFormat{};
     VkExtent2D _swapChainExtend{};
     std::vector<VkImage> _swapChainImages{};
+    std::vector<VkImageView> _swapChainImageViews{};
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
