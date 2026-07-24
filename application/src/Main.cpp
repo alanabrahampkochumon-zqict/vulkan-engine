@@ -68,6 +68,7 @@ private:
         createLogicalDevice();
         createSwapChain();
         createImageViews();
+        createGraphicsPipeline();
     }
 
     void mainLoop()
@@ -103,6 +104,11 @@ private:
 
         vkDestroyInstance(_vkInstance, nullptr);
         SDL_DestroyWindow(_window);
+    }
+
+    void createGraphicsPipeline()
+    {
+        
     }
 
     void createInstance()
