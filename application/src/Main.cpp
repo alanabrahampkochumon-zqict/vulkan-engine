@@ -116,6 +116,23 @@ private:
         const auto vertexShaderModule   = createShaderModule(vertexShaderCode);
         const auto fragmentShaderModule = createShaderModule(fragmentShaderCode);
 
+        // Vertex shader pipeline
+        VkPipelineShaderStageCreateInfo vertexShaderStageCreateInfo{};
+        vertexShaderStageCreateInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        vertexShaderStageCreateInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT; // Vertex shader
+        vertexShaderStageCreateInfo.module = vertexShaderModule;
+        vertexShaderStageCreateInfo.pName  = "main"; // Entry point
+
+        // Fragment shader pipeline
+        VkPipelineShaderStageCreateInfo fragmentShaderStageCreateInfo{};
+        fragmentShaderStageCreateInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        fragmentShaderStageCreateInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+        fragmentShaderStageCreateInfo.module = fragmentShaderModule;
+        fragmentShaderStageCreateInfo.pName  = "main"; // Entry point
+
+        VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
+
+
         // We can clean up the shader modules since they are loaded per pipeline
         vkDestroyShaderModule(_vkDevice, vertexShaderModule, nullptr);
         vkDestroyShaderModule(_vkDevice, fragmentShaderModule, nullptr);
