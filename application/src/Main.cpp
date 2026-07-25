@@ -110,8 +110,31 @@ private:
 
     void createGraphicsPipeline()
     {
-        auto vertexShaderCode   = readFile("shaders/basic.vert.spv");
-        auto fragmentShaderCode = readFile("shaders/basic.frag.spv");
+        const auto vertexShaderCode   = readFile("shaders/basic.vert.spv");
+        const auto fragmentShaderCode = readFile("shaders/basic.frag.spv");
+
+        const auto vertexShaderModule   = createShaderModule(vertexShaderCode);
+        const auto fragmentShaderModule = createShaderModule(fragmentShaderCode);
+
+        // We can clean up the shader modules since they are loaded per pipeline
+        vkDestroyShaderModule(_vkDevice, vertexShaderModule, nullptr);
+        vkDestroyShaderModule(_vkDevice, fragmentShaderModule, nullptr);
+    }
+
+
+    VkShaderModule createShaderModule(const std::vector<char>& code)
+    {
+        VkShaderModuleCreateInfo shaderCreateInfo{};
+        shaderCreateInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        shaderCreateInfo.codeSize = code.size();
+        shaderCreateInfo.pCode    = reinterpret_cast<const uint32_t*>(code.data());
+
+        VkShaderModule shaderModule;
+        if (vkCreateShaderModule(_vkDevice, &shaderCreateInfo, nullptr, &shaderModule) != VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error creating the shader.");
+        }
+        return shaderModule;
     }
 
     void createInstance()
