@@ -24,3 +24,14 @@ target_link_libraries(
         SDL3::SDL3-static
         ${Vulkan_LIBRARIES}
 )
+
+
+add_custom_command(
+        TARGET VulkanEngine
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E
+        copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders"
+        "$<TARGET_FILE_DIR:VulkanEngine>/shaders"
+        COMMENT "Copying shaders to build directory"
+)

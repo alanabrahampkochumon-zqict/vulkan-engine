@@ -31,7 +31,7 @@ std::vector<char> readFile(const std::string& filename)
     // Move the file ptr to the first
     file.seekg(0);
     // Read the file
-    file.read(buffer.data(), fileSize);
+    file.read(buffer.data(), static_cast<long long>(fileSize));
 
     file.close();
 

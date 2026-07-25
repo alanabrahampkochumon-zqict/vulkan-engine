@@ -1,3 +1,5 @@
+#include "FileReader.h"
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <algorithm>
@@ -108,7 +110,8 @@ private:
 
     void createGraphicsPipeline()
     {
-        
+        auto vertexShaderCode   = readFile("shaders/basic.vert.spv");
+        auto fragmentShaderCode = readFile("shaders/basic.frag.spv");
     }
 
     void createInstance()
