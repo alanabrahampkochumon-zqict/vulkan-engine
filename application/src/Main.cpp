@@ -94,6 +94,8 @@ private:
 
     void cleanUp()
     {
+        vkDestroyPipelineLayout(_vkDevice, _pipelineLayout, nullptr);
+
         for (const auto& swapChainImageView : _swapChainImageViews)
             vkDestroyImageView(_vkDevice, swapChainImageView, nullptr);
 
@@ -244,7 +246,7 @@ private:
         colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
         colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;      // Optional
 
-        // Blend costants
+        // Blend constants
         VkPipelineColorBlendStateCreateInfo colorBlendingCreateInfo{};
         colorBlendingCreateInfo.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         colorBlendingCreateInfo.logicOpEnable     = VK_FALSE;
@@ -255,6 +257,20 @@ private:
         colorBlendingCreateInfo.blendConstants[1] = 0.0f; // Optional
         colorBlendingCreateInfo.blendConstants[2] = 0.0f; // Optional
         colorBlendingCreateInfo.blendConstants[3] = 0.0f; // Optional
+
+        // Pipeline Layout
+
+        VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
+        pipelineLayoutCreateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutCreateInfo.setLayoutCount         = 0;       // Optional
+        pipelineLayoutCreateInfo.pSetLayouts            = nullptr; // Optional
+        pipelineLayoutCreateInfo.pushConstantRangeCount = 0;       // Optional
+        pipelineLayoutCreateInfo.pPushConstantRanges    = nullptr; // Optional
+
+        if (vkCreatePipelineLayout(_vkDevice, &pipelineLayoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create pipeline layout!");
+        }
     }
 
 
@@ -900,6 +916,7 @@ private:
     VkExtent2D _swapChainExtent{};
     std::vector<VkImage> _swapChainImages{};
     std::vector<VkImageView> _swapChainImageViews{};
+    VkPipelineLayout _pipelineLayout;
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
