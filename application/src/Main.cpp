@@ -219,13 +219,42 @@ private:
         /// Multisampling (AA) -> DISABLED FOR NOW
         ///
         VkPipelineMultisampleStateCreateInfo multisamplingCreateInfo{};
-        multisamplingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        multisamplingCreateInfo.sampleShadingEnable = VK_FALSE;
-        multisamplingCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-        multisamplingCreateInfo.minSampleShading = 1.0f; // Optional
-        multisamplingCreateInfo.pSampleMask = nullptr; // Optional
+        multisamplingCreateInfo.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisamplingCreateInfo.sampleShadingEnable   = VK_FALSE;
+        multisamplingCreateInfo.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
+        multisamplingCreateInfo.minSampleShading      = 1.0f;     // Optional
+        multisamplingCreateInfo.pSampleMask           = nullptr;  // Optional
         multisamplingCreateInfo.alphaToCoverageEnable = VK_FALSE; // Optional
-        multisamplingCreateInfo.alphaToOneEnable = VK_FALSE; // Optional
+        multisamplingCreateInfo.alphaToOneEnable      = VK_FALSE; // Optional
+
+
+        ////////////////////////////////////////////////////
+        /// Depth and stencil testing -> DISABLED FOR NOW
+        ///
+        VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+        colorBlendAttachment.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable = VK_FALSE;
+        // Color Blending
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+        colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;      // Optional
+        // Alpha Blending
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+        colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;      // Optional
+
+        // Blend costants
+        VkPipelineColorBlendStateCreateInfo colorBlendingCreateInfo{};
+        colorBlendingCreateInfo.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlendingCreateInfo.logicOpEnable     = VK_FALSE;
+        colorBlendingCreateInfo.logicOp           = VK_LOGIC_OP_COPY; // Optional
+        colorBlendingCreateInfo.attachmentCount   = 1;
+        colorBlendingCreateInfo.pAttachments      = &colorBlendAttachment;
+        colorBlendingCreateInfo.blendConstants[0] = 0.0f; // Optional
+        colorBlendingCreateInfo.blendConstants[1] = 0.0f; // Optional
+        colorBlendingCreateInfo.blendConstants[2] = 0.0f; // Optional
+        colorBlendingCreateInfo.blendConstants[3] = 0.0f; // Optional
     }
 
 
