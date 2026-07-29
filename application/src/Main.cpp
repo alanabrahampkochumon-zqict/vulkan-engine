@@ -214,6 +214,18 @@ private:
         rasterizationCreateInfo.depthBiasConstantFactor = 0.0f; // Optional
         rasterizationCreateInfo.depthBiasClamp          = 0.0f; // Optional
         rasterizationCreateInfo.depthBiasSlopeFactor    = 0.0f; // Optional
+
+        ///////////////////////////////////////////////////
+        /// Multisampling (AA) -> DISABLED FOR NOW
+        ///
+        VkPipelineMultisampleStateCreateInfo multisamplingCreateInfo{};
+        multisamplingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisamplingCreateInfo.sampleShadingEnable = VK_FALSE;
+        multisamplingCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisamplingCreateInfo.minSampleShading = 1.0f; // Optional
+        multisamplingCreateInfo.pSampleMask = nullptr; // Optional
+        multisamplingCreateInfo.alphaToCoverageEnable = VK_FALSE; // Optional
+        multisamplingCreateInfo.alphaToOneEnable = VK_FALSE; // Optional
     }
 
 
