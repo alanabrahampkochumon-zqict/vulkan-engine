@@ -122,6 +122,7 @@ private:
         vertexShaderStageCreateInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT; // Vertex shader
         vertexShaderStageCreateInfo.module = vertexShaderModule;
         vertexShaderStageCreateInfo.pName  = "main"; // Entry point
+        // vertexShaderStageCreateInfo.pSpecializationInfo = nullptr; // Shader constants (set to null by braced init)
 
         // Fragment shader pipeline
         VkPipelineShaderStageCreateInfo fragmentShaderStageCreateInfo{};
@@ -136,6 +137,61 @@ private:
         // We can clean up the shader modules since they are loaded per pipeline
         vkDestroyShaderModule(_vkDevice, vertexShaderModule, nullptr);
         vkDestroyShaderModule(_vkDevice, fragmentShaderModule, nullptr);
+
+
+        ////////////////////////////////////////////////
+        /// FIXED PIPELINE
+        ///
+
+        // Setup vertex input info
+        VkPipelineVertexInputStateCreateInfo vertexCreateInfo{};
+        vertexCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        // Attribute count and pointers are set to 0 and nullptr since we have hardcoded values in shader
+        vertexCreateInfo.vertexBindingDescriptionCount   = 0;
+        vertexCreateInfo.pVertexBindingDescriptions      = nullptr;
+        vertexCreateInfo.vertexAttributeDescriptionCount = 0;
+        vertexCreateInfo.pVertexAttributeDescriptions    = nullptr;
+
+        // Input assembly: Primitive to draw
+        VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{};
+        inputAssemblyCreateInfo.sType    = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // Triangles from 3 vertices
+        inputAssemblyCreateInfo.primitiveRestartEnable =
+            VK_FALSE; // Optimization for reusing vertices when using _STRIP topology
+
+        // Viewport (Transform)
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        // Using swap chain extends dimensions since we will be using these sizes for frame buffers
+        viewport.width    = static_cast<float>(_swapChainExtent.width);
+        viewport.height   = static_cast<float>(_swapChainExtent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+
+        // Scissor (Clipping)
+        VkRect2D scissor{};
+        scissor.offset = { .x = 0, .y = 0 };
+        scissor.extent = _swapChainExtent;
+
+
+        //////////////////////////////////
+        /// DYNAMIC VIEWPORT AND SCISSOR
+        std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        // Setup the dynamic states
+        VkPipelineDynamicStateCreateInfo dynamicStateCreate{};
+        dynamicStateCreate.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreate.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        dynamicStateCreate.pDynamicStates    = dynamicStates.data();
+
+        VkPipelineViewportStateCreateInfo viewportCreateInfo{};
+        viewportCreateInfo.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportCreateInfo.viewportCount = 1;
+        viewportCreateInfo.scissorCount  = 1;
+        //// The actual viewport and scissor rectangles will be set up at draw time
+        /// Setting VP and SCI now
+        viewportCreateInfo.pViewports = &viewport;
+        viewportCreateInfo.pScissors = &scissor;
     }
 
 
@@ -534,7 +590,7 @@ private:
         vkGetSwapchainImagesKHR(_vkDevice, _vkSwapChain, &numImages, _swapChainImages.data());
 
         // Store SwapChain format and extent for future use
-        _swapChainExtend = extent;
+        _swapChainExtent = extent;
         _swapChainFormat = format.format;
     }
 
@@ -778,7 +834,7 @@ private:
     VkSurfaceKHR _vkSurface{};
     VkSwapchainKHR _vkSwapChain{};
     VkFormat _swapChainFormat{};
-    VkExtent2D _swapChainExtend{};
+    VkExtent2D _swapChainExtent{};
     std::vector<VkImage> _swapChainImages{};
     std::vector<VkImageView> _swapChainImageViews{};
 
