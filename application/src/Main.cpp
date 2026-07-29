@@ -191,7 +191,29 @@ private:
         //// The actual viewport and scissor rectangles will be set up at draw time
         /// Setting VP and SCI now
         viewportCreateInfo.pViewports = &viewport;
-        viewportCreateInfo.pScissors = &scissor;
+        viewportCreateInfo.pScissors  = &scissor;
+
+
+        //////////////////////////////////
+        /// RASTERIZATION
+
+        VkPipelineRasterizationStateCreateInfo rasterizationCreateInfo{};
+        rasterizationCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizationCreateInfo.depthClampEnable =
+            VK_FALSE; // Fragments in beyond far and near plane and NOT discarded but clamped
+        rasterizationCreateInfo.rasterizerDiscardEnable =
+            VK_FALSE; // If true, geometry never passes to rasterizer, disabling any frame buffer output.
+        rasterizationCreateInfo.polygonMode =
+            VK_POLYGON_MODE_FILL;                 // Fill the area of polygon(any other mode requires GPU feature)
+        rasterizationCreateInfo.lineWidth = 1.0f; // Thickness in terms of number of fragment(Hardware dependent)
+        rasterizationCreateInfo.cullMode  = VK_CULL_MODE_BACK_BIT;   // Backface culling
+        rasterizationCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE; // Vertex ordering
+
+        // Alter depth values(useful for shadow mapping), disabled
+        rasterizationCreateInfo.depthBiasEnable         = VK_FALSE;
+        rasterizationCreateInfo.depthBiasConstantFactor = 0.0f; // Optional
+        rasterizationCreateInfo.depthBiasClamp          = 0.0f; // Optional
+        rasterizationCreateInfo.depthBiasSlopeFactor    = 0.0f; // Optional
     }
 
 
