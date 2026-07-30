@@ -55,7 +55,7 @@ private:
     {
         SDL_SetAppMetadata(APP_NAME, APP_VERSION, APP_ID);
         if (!SDL_Init(SDL_INIT_VIDEO))
-            throw std::exception("There was an error initializing the Window"); // TODO: Strip down exceptions
+            throw std::exception("There was an error initializing the Window");
 
         _window = SDL_CreateWindow(APP_NAME, WIDTH, HEIGHT, SDL_WINDOW_VULKAN);
     }
@@ -70,6 +70,7 @@ private:
         createLogicalDevice();
         createSwapChain();
         createImageViews();
+        createRenderPass();
         createGraphicsPipeline();
     }
 
@@ -259,7 +260,6 @@ private:
         colorBlendingCreateInfo.blendConstants[3] = 0.0f; // Optional
 
         // Pipeline Layout
-
         VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
         pipelineLayoutCreateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutCreateInfo.setLayoutCount         = 0;       // Optional
@@ -271,6 +271,35 @@ private:
         {
             throw std::runtime_error("Failed to create pipeline layout!");
         }
+    }
+
+    void createRenderPass()
+    {
+        VkAttachmentDescription colorAttachment{};
+        colorAttachment.format  = _swapChainFormat;
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        // Determines what to do with the data before and after rendering
+        colorAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;  // Clear pre-start
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // Stored post-start for reading
+        // No stencil buffer use
+        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+        // Layout prior to rendering
+        // Contents are not preserved(NP as we are clearing it anyways)
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        // Layout after rendering
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // Image to be presented to the swap chain
+
+        VkAttachmentReference colorAttachmentRef{};
+        colorAttachmentRef.attachment = 0; // First attachment layout(location=0) out vec4 outColor;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        // Subpass
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // Subpass binding point
+        subpass.colorAttachmentCount = 1; // 1 color attachment
+        subpass.pColorAttachments = &colorAttachmentRef; // Bind the color attachment ref
     }
 
 
