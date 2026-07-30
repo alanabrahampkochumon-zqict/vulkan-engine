@@ -96,7 +96,7 @@ private:
     void cleanUp()
     {
         vkDestroyPipelineLayout(_vkDevice, _pipelineLayout, nullptr);
-
+        vkDestroyRenderPass(_vkDevice, _renderPass, nullptr);
         for (const auto& swapChainImageView : _swapChainImageViews)
             vkDestroyImageView(_vkDevice, swapChainImageView, nullptr);
 
@@ -293,13 +293,25 @@ private:
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0; // First attachment layout(location=0) out vec4 outColor;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         // Subpass
         VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // Subpass binding point
-        subpass.colorAttachmentCount = 1; // 1 color attachment
-        subpass.pColorAttachments = &colorAttachmentRef; // Bind the color attachment ref
+        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS; // Subpass binding point
+        subpass.colorAttachmentCount = 1;                               // 1 color attachment
+        subpass.pColorAttachments    = &colorAttachmentRef;             // Bind the color attachment ref
+
+        VkRenderPassCreateInfo renderPassCreateInfo{};
+        renderPassCreateInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassCreateInfo.attachmentCount = 1;
+        renderPassCreateInfo.pAttachments    = &colorAttachment;
+        renderPassCreateInfo.subpassCount    = 1;
+        renderPassCreateInfo.pSubpasses      = &subpass;
+
+        if (vkCreateRenderPass(_vkDevice, &renderPassCreateInfo, nullptr, &_renderPass) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create render pass");
+        }
     }
 
 
@@ -945,6 +957,7 @@ private:
     VkExtent2D _swapChainExtent{};
     std::vector<VkImage> _swapChainImages{};
     std::vector<VkImageView> _swapChainImageViews{};
+    VkRenderPass _renderPass;
     VkPipelineLayout _pipelineLayout;
 
     // Swapchain support
