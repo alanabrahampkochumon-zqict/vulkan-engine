@@ -138,11 +138,6 @@ private:
         VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
 
 
-        // We can clean up the shader modules since they are loaded per pipeline
-        vkDestroyShaderModule(_vkDevice, vertexShaderModule, nullptr);
-        vkDestroyShaderModule(_vkDevice, fragmentShaderModule, nullptr);
-
-
         ////////////////////////////////////////////////
         /// FIXED PIPELINE
         ///
@@ -314,6 +309,12 @@ private:
         {
             throw std::runtime_error("There was an error creating a graphics pipeline.");
         }
+
+
+        // NOTE: ONLY DESTROY SHADER MODULES AFTER PIPELINE CREATION
+        // We can clean up the shader modules since they are loaded per pipeline
+        vkDestroyShaderModule(_vkDevice, vertexShaderModule, nullptr);
+        vkDestroyShaderModule(_vkDevice, fragmentShaderModule, nullptr);
     }
 
     void createRenderPass()
