@@ -95,6 +95,7 @@ private:
 
     void cleanUp()
     {
+        vkDestroyPipeline(_vkDevice, _graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(_vkDevice, _pipelineLayout, nullptr);
         vkDestroyRenderPass(_vkDevice, _renderPass, nullptr);
         for (const auto& swapChainImageView : _swapChainImageViews)
@@ -182,10 +183,10 @@ private:
         /// DYNAMIC VIEWPORT AND SCISSOR
         std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
         // Setup the dynamic states
-        VkPipelineDynamicStateCreateInfo dynamicStateCreate{};
-        dynamicStateCreate.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicStateCreate.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-        dynamicStateCreate.pDynamicStates    = dynamicStates.data();
+        VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
+        dynamicStateCreateInfo.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        dynamicStateCreateInfo.pDynamicStates    = dynamicStates.data();
 
         VkPipelineViewportStateCreateInfo viewportCreateInfo{};
         viewportCreateInfo.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -270,6 +271,48 @@ private:
         if (vkCreatePipelineLayout(_vkDevice, &pipelineLayoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
         {
             throw std::runtime_error("Failed to create pipeline layout!");
+        }
+
+
+        //////////////////////////////////////////////////////////////////////////////////////
+        /// PIPELINE CREATION
+        ///
+        VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
+        pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+
+        /// Pass in shader structures
+        pipelineCreateInfo.stageCount = 2; // Vertex, Fragment
+        pipelineCreateInfo.pStages    = shaderStages;
+
+        /// Pass in fixed function stage structures
+        pipelineCreateInfo.pVertexInputState   = &vertexCreateInfo;
+        pipelineCreateInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
+        pipelineCreateInfo.pViewportState      = &viewportCreateInfo;
+        pipelineCreateInfo.pRasterizationState = &rasterizationCreateInfo;
+        pipelineCreateInfo.pMultisampleState   = &multisamplingCreateInfo;
+        pipelineCreateInfo.pDepthStencilState  = nullptr; // Optional
+        pipelineCreateInfo.pColorBlendState    = &colorBlendingCreateInfo;
+        pipelineCreateInfo.pDynamicState       = &dynamicStateCreateInfo;
+
+        // Add the pipeline layout
+        pipelineCreateInfo.layout = _pipelineLayout;
+
+        // Add the render pass
+        pipelineCreateInfo.renderPass = _renderPass;
+        pipelineCreateInfo.subpass    = 0; // Index of subpass
+
+        // Setup pipeline derivation(since we have none, put to nullptr and -1)
+        // Helps in performance dpt by reusing partly configure pipelines
+        // To use VK_PIPELINE_CREATE_DERIVATIVE_BIT  must be configured in VkGraphicsPipelineCreateInfo
+        pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+        pipelineCreateInfo.basePipelineIndex  = -1;
+
+
+        // vkCreateGraphicsPipeline can create multiple pipeline but we need only 1
+        if (vkCreateGraphicsPipelines(_vkDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_graphicsPipeline) !=
+            VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error creating a graphics pipeline.");
         }
     }
 
@@ -959,6 +1002,7 @@ private:
     std::vector<VkImageView> _swapChainImageViews{};
     VkRenderPass _renderPass;
     VkPipelineLayout _pipelineLayout;
+    VkPipeline _graphicsPipeline;
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
