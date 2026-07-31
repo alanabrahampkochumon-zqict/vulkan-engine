@@ -72,6 +72,7 @@ private:
         createImageViews();
         createRenderPass();
         createGraphicsPipeline();
+        createFramebuffers();
     }
 
     void mainLoop()
@@ -95,6 +96,9 @@ private:
 
     void cleanUp()
     {
+        for (const auto& frameBuffer : _swapChainFramebuffers)
+            vkDestroyFramebuffer(_vkDevice, frameBuffer, nullptr);
+
         vkDestroyPipeline(_vkDevice, _graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(_vkDevice, _pipelineLayout, nullptr);
         vkDestroyRenderPass(_vkDevice, _renderPass, nullptr);
@@ -110,6 +114,30 @@ private:
 
         vkDestroyInstance(_vkInstance, nullptr);
         SDL_DestroyWindow(_window);
+    }
+
+    void createFramebuffers()
+    {
+        // Resize the frame buffer [] to be of the same size as the image views []
+        _swapChainFramebuffers.resize(_swapChainImageViews.size());
+        // Iterate through each of the image view and create a framebuffer
+        for (size_t i = 0; i < _swapChainImageViews.size(); ++i)
+        {
+            VkImageView attachments[] = { _swapChainImageViews[i] };
+
+            VkFramebufferCreateInfo framebufferCreateInfo{};
+            framebufferCreateInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferCreateInfo.renderPass      = _renderPass;
+            framebufferCreateInfo.attachmentCount = 1;
+            framebufferCreateInfo.pAttachments    = attachments;
+            framebufferCreateInfo.width           = _swapChainExtent.width;
+            framebufferCreateInfo.height          = _swapChainExtent.height;
+            framebufferCreateInfo.layers          = 1;
+
+            if (vkCreateFramebuffer(_vkDevice, &framebufferCreateInfo, nullptr, &_swapChainFramebuffers[i]) !=
+                VK_SUCCESS)
+                throw std::runtime_error("There was an error creating framebuffers");
+        }
     }
 
     void createGraphicsPipeline()
@@ -1004,6 +1032,7 @@ private:
     VkRenderPass _renderPass;
     VkPipelineLayout _pipelineLayout;
     VkPipeline _graphicsPipeline;
+    std::vector<VkFramebuffer> _swapChainFramebuffers;
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
