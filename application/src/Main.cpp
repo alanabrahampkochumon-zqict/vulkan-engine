@@ -73,6 +73,7 @@ private:
         createRenderPass();
         createGraphicsPipeline();
         createFramebuffers();
+        createCommandPool();
     }
 
     void mainLoop()
@@ -96,6 +97,9 @@ private:
 
     void cleanUp()
     {
+
+        vkDestroyCommandPool(_vkDevice, _commandPool, nullptr);
+
         for (const auto& frameBuffer : _swapChainFramebuffers)
             vkDestroyFramebuffer(_vkDevice, frameBuffer, nullptr);
 
@@ -137,6 +141,22 @@ private:
             if (vkCreateFramebuffer(_vkDevice, &framebufferCreateInfo, nullptr, &_swapChainFramebuffers[i]) !=
                 VK_SUCCESS)
                 throw std::runtime_error("There was an error creating framebuffers");
+        }
+    }
+
+    void createCommandPool()
+    {
+        const auto [graphicsFamily, presentFamily] = findQueueFamilies(_physicalDevice);
+
+        VkCommandPoolCreateInfo commandPoolCreateInfo{};
+        commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        commandPoolCreateInfo.flags =
+            VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // Individual re-record command buffers
+        commandPoolCreateInfo.queueFamilyIndex = graphicsFamily.value();
+
+        if (vkCreateCommandPool(_vkDevice, &commandPoolCreateInfo, nullptr, &_commandPool) != VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error creating command pool");
         }
     }
 
@@ -1029,9 +1049,10 @@ private:
     VkExtent2D _swapChainExtent{};
     std::vector<VkImage> _swapChainImages{};
     std::vector<VkImageView> _swapChainImageViews{};
-    VkRenderPass _renderPass;
-    VkPipelineLayout _pipelineLayout;
-    VkPipeline _graphicsPipeline;
+    VkRenderPass _renderPass{};
+    VkPipelineLayout _pipelineLayout{};
+    VkPipeline _graphicsPipeline{};
+    VkCommandPool _commandPool{};
     std::vector<VkFramebuffer> _swapChainFramebuffers;
 
     // Swapchain support
