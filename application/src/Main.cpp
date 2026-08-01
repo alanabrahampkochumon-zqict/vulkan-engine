@@ -128,15 +128,50 @@ private:
 
         // Create a single command buffer with the initialized command pool
         VkCommandBufferAllocateInfo allocateInfo{};
-        allocateInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocateInfo.commandPool        = _commandPool;
-        allocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocateInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocateInfo.commandPool = _commandPool;
+        allocateInfo.level =
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY; // Can be submitted directly but cannot be shared by another queue
         allocateInfo.commandBufferCount = 1;
 
         if (vkAllocateCommandBuffers(_vkDevice, &allocateInfo, &_commandBuffer) != VK_SUCCESS)
         {
             throw std::runtime_error("There was an error allocating command buffer(s)");
         }
+    }
+
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+    {
+        VkCommandBufferBeginInfo commandBufferBeginInfo{};
+        commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        commandBufferBeginInfo.flags = 0;
+        commandBufferBeginInfo.pInheritanceInfo =
+            nullptr; // Only needed if we are using secondary command buffer specifying the state to inherit from
+
+        if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error which starting command buffer recording");
+        }
+
+        // Configure the render pass beginning with the target framebuffer and the renderpass we created earlier
+        VkRenderPassBeginInfo renderPassBeginInfo{};
+        renderPassBeginInfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassBeginInfo.framebuffer = _swapChainFramebuffers[imageIndex];
+        renderPassBeginInfo.renderPass  = _renderPass;
+
+        // Specify the render area(anything outside of this is undefined)
+        renderPassBeginInfo.renderArea.offset = { .x = 0, .y = 0 };
+        renderPassBeginInfo.renderArea.extent = _swapChainExtent;
+
+        // Set the clear values
+        VkClearValue vkClearValue{ { 0.0f, 0.0f, 0.0f, 1.0f } };
+        renderPassBeginInfo.clearValueCount = 1;
+        renderPassBeginInfo.pClearValues    = &vkClearValue;
+
+        // Begin the render pass
+        // CONTENTS_INLINE -> Commands are embedded in the primary command buffer and there will be no secondary
+        // COMMAND BUFFERS
+        vkCmdBeginRenderPass(_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
     void createFramebuffers()
