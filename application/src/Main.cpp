@@ -74,6 +74,7 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
+        createCommandBuffer();
     }
 
     void mainLoop()
@@ -118,6 +119,24 @@ private:
 
         vkDestroyInstance(_vkInstance, nullptr);
         SDL_DestroyWindow(_window);
+    }
+
+    void createCommandBuffer()
+    {
+        /// Clean up automatically when command pool is freed
+        /// so no need for explicit cleanup
+
+        // Create a single command buffer with the initialized command pool
+        VkCommandBufferAllocateInfo allocateInfo{};
+        allocateInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocateInfo.commandPool        = _commandPool;
+        allocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocateInfo.commandBufferCount = 1;
+
+        if (vkAllocateCommandBuffers(_vkDevice, &allocateInfo, &_commandBuffer) != VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error allocating command buffer(s)");
+        }
     }
 
     void createFramebuffers()
@@ -1053,6 +1072,7 @@ private:
     VkPipelineLayout _pipelineLayout{};
     VkPipeline _graphicsPipeline{};
     VkCommandPool _commandPool{};
+    VkCommandBuffer _commandBuffer{};
     std::vector<VkFramebuffer> _swapChainFramebuffers;
 
     // Swapchain support
