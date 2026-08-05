@@ -75,6 +75,7 @@ private:
         createFramebuffers();
         createCommandPool();
         createCommandBuffer();
+        createSyncObjects();
     }
 
     void mainLoop()
@@ -93,11 +94,15 @@ private:
                         continue;
                 }
             }
+            drawFrame();
         }
     }
 
     void cleanUp()
     {
+        vkDestroySemaphore(_vkDevice, _imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(_vkDevice, _renderingFinishedSemaphore, nullptr);
+        vkDestroyFence(_vkDevice, _inFlightFence, nullptr);
 
         vkDestroyCommandPool(_vkDevice, _commandPool, nullptr);
 
@@ -121,6 +126,16 @@ private:
         SDL_DestroyWindow(_window);
     }
 
+    void drawFrame()
+    {
+        //// STEPS
+        /// 1. Wait for previous frame to finish
+        /// 2. Acquire swap chain image
+        /// 3. Record command buffer
+        /// 4. Submit command buffer
+        /// 5. Present the swap chain image
+    }
+
     void createCommandBuffer()
     {
         /// Clean up automatically when command pool is freed
@@ -137,6 +152,22 @@ private:
         if (vkAllocateCommandBuffers(_vkDevice, &allocateInfo, &_commandBuffer) != VK_SUCCESS)
         {
             throw std::runtime_error("There was an error allocating command buffer(s)");
+        }
+    }
+
+    void createSyncObjects()
+    {
+        VkSemaphoreCreateInfo semaphoreCreateInfo{};
+        semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkFenceCreateInfo fenceCreateInfo{};
+        fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+        if (vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_renderingFinishedSemaphore) != VK_SUCCESS ||
+            vkCreateFence(_vkDevice, &fenceCreateInfo, nullptr, &_inFlightFence) != VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error creating the semaphores");
         }
     }
 
@@ -1136,6 +1167,11 @@ private:
     VkCommandPool _commandPool{};
     VkCommandBuffer _commandBuffer{};
     std::vector<VkFramebuffer> _swapChainFramebuffers;
+
+    /// Synchronization
+    // Semaphore for swap chain image acquire and rendering
+    VkSemaphore _imageAvailableSemaphore{}, _renderingFinishedSemaphore{};
+    VkFence _inFlightFence{}; // Fence for syncing frame renders
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
