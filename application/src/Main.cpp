@@ -134,6 +134,48 @@ private:
         /// 3. Record command buffer
         /// 4. Submit command buffer
         /// 5. Present the swap chain image
+
+        // Wait for previous frame to finish
+        vkWaitForFences(_vkDevice, 1, &_inFlightFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(_vkDevice, 1, &_inFlightFence); // We need to manually reset the fence
+
+        // Acquire an image from the swap chain
+        uint32_t imageIndex;
+        vkAcquireNextImageKHR(_vkDevice, _vkSwapChain, UINT64_MAX, _imageAvailableSemaphore, VK_NULL_HANDLE,
+                              &imageIndex);
+
+        // Record the command buffer
+        vkResetCommandBuffer(_commandBuffer, 0);
+        recordCommandBuffer(_commandBuffer, imageIndex);
+
+        // Submit the command buffer
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        // Specifies which semaphores to wait on before execution begin
+        // the pipeline to wait in which in our cases is writing the color
+        // attachment
+        VkSemaphore waitSemaphores[]      = { _imageAvailableSemaphore };
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        submitInfo.waitSemaphoreCount     = 1;
+        submitInfo.pWaitSemaphores        = waitSemaphores;
+        submitInfo.pWaitDstStageMask      = waitStages;
+
+        // Specify which command buffers to submit for execution
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers    = &_commandBuffer;
+
+        // Specify which semaphores to signal once command is finished executing
+        VkSemaphore signalSemaphores[]  = { _renderingFinishedSemaphore };
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores    = signalSemaphores;
+
+        // Submit the queue
+        // The fence is optional providing signalling when the command buffers finish execution
+        if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _inFlightFence) != VK_SUCCESS)
+        {
+            throw std::runtime_error("There was an error submitting the command buffer");
+        }
     }
 
     void createCommandBuffer()
@@ -162,6 +204,10 @@ private:
 
         VkFenceCreateInfo fenceCreateInfo{};
         fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        // Fence by default are started in unsignaled state, but we wait on them to be signaled inside the
+        // draw call. Since, they are only signalled after a frame finished rendering, we are essentially waiting
+        // indefinitely on the first frame. To work around this, we need to create the fence in signaled state
+        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         if (vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_imageAvailableSemaphore) != VK_SUCCESS ||
             vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_renderingFinishedSemaphore) != VK_SUCCESS ||
