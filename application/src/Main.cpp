@@ -107,8 +107,11 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             vkDestroySemaphore(_vkDevice, _imageAvailableSemaphores[i], nullptr);
-            vkDestroySemaphore(_vkDevice, _renderingFinishedSemaphores[i], nullptr);
             vkDestroyFence(_vkDevice, _inFlightFences[i], nullptr);
+        }
+        for (size_t i = 0; i < _swapChainImages.size(); ++i)
+        {
+            vkDestroySemaphore(_vkDevice, _renderingFinishedSemaphores[i], nullptr);
         }
 
         vkDestroyCommandPool(_vkDevice, _commandPool, nullptr);
@@ -194,7 +197,7 @@ private:
         presentInfoKhr.waitSemaphoreCount = 1;
         presentInfoKhr.pWaitSemaphores    = signalSemaphores;
 
-        VkSwapchainKHR swapChains[]   = { _vkSwapChain };
+        const VkSwapchainKHR swapChains[]   = { _vkSwapChain };
         presentInfoKhr.swapchainCount = 1;
         presentInfoKhr.pSwapchains    = swapChains;
         presentInfoKhr.pImageIndices  = &imageIndex;
