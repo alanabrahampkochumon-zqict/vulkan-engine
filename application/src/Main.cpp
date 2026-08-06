@@ -148,8 +148,8 @@ private:
 
         // Acquire an image from the swap chain
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(_vkDevice, _vkSwapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE,
-                              &imageIndex);
+        vkAcquireNextImageKHR(_vkDevice, _vkSwapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame],
+                              VK_NULL_HANDLE, &imageIndex);
 
         // Record the command buffer
         vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
@@ -173,7 +173,9 @@ private:
         submitInfo.pCommandBuffers    = &_commandBuffers[_currentFrame];
 
         // Specify which semaphores to signal once command is finished executing
-        VkSemaphore signalSemaphores[]  = { _renderingFinishedSemaphores[_currentFrame] };
+        // FIX: Must acquire the signalling/rendering finished semaphore based on current imageindex
+        // not the frame count
+        VkSemaphore signalSemaphores[]  = { _renderingFinishedSemaphores[imageIndex] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores    = signalSemaphores;
 
@@ -227,8 +229,9 @@ private:
     void createSyncObjects()
     {
         _imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        // FIX: Submit/Rendering finished semaphore must not
-        _renderingFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        // FIX: Submit/Rendering finished semaphore must not be coupled to frames in flight, but
+        // to the number of swap chain images acquired
+        _renderingFinishedSemaphores.resize(_swapChainImages.size());
         _inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
         VkSemaphoreCreateInfo semaphoreCreateInfo{};
@@ -245,11 +248,18 @@ private:
         {
             if (vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_imageAvailableSemaphores[i]) !=
                     VK_SUCCESS ||
-                vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_renderingFinishedSemaphores[i]) !=
-                    VK_SUCCESS ||
                 vkCreateFence(_vkDevice, &fenceCreateInfo, nullptr, &_inFlightFences[i]) != VK_SUCCESS)
             {
                 throw std::runtime_error("There was an error creating the semaphores");
+            }
+        }
+
+        for (size_t i = 0; i < _swapChainImages.size(); ++i)
+        {
+            if (vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_renderingFinishedSemaphores[i]) !=
+                VK_SUCCESS)
+            {
+                throw std::runtime_error("There was an error creating the sumbit semaphores");
             }
         }
     }
