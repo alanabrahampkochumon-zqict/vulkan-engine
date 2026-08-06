@@ -15,9 +15,10 @@
 #include <vulkan/vulkan.h>
 
 
-static auto APP_NAME    = "Vulkan Renderer";
-static auto APP_ID      = "com.alan.vulkan_renderer";
-static auto APP_VERSION = "1.0.0";
+static auto APP_NAME                  = "Vulkan Renderer";
+static auto APP_ID                    = "com.alan.vulkan_renderer";
+static auto APP_VERSION               = "1.0.0";
+static const int MAX_FRAMES_IN_FLIGHT = 2;
 
 struct QueueFamilyIndices
 {
@@ -74,7 +75,7 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
-        createCommandBuffer();
+        createCommandBuffers();
         createSyncObjects();
     }
 
@@ -103,9 +104,12 @@ private:
 
     void cleanUp()
     {
-        vkDestroySemaphore(_vkDevice, _imageAvailableSemaphore, nullptr);
-        vkDestroySemaphore(_vkDevice, _renderingFinishedSemaphore, nullptr);
-        vkDestroyFence(_vkDevice, _inFlightFence, nullptr);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            vkDestroySemaphore(_vkDevice, _imageAvailableSemaphores[i], nullptr);
+            vkDestroySemaphore(_vkDevice, _renderingFinishedSemaphores[i], nullptr);
+            vkDestroyFence(_vkDevice, _inFlightFences[i], nullptr);
+        }
 
         vkDestroyCommandPool(_vkDevice, _commandPool, nullptr);
 
@@ -139,17 +143,17 @@ private:
         /// 5. Present the swap chain image
 
         // Wait for previous frame to finish
-        vkWaitForFences(_vkDevice, 1, &_inFlightFence, VK_TRUE, UINT64_MAX);
-        vkResetFences(_vkDevice, 1, &_inFlightFence); // We need to manually reset the fence
+        vkWaitForFences(_vkDevice, 1, &_inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
+        vkResetFences(_vkDevice, 1, &_inFlightFences[_currentFrame]); // We need to manually reset the fence
 
         // Acquire an image from the swap chain
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(_vkDevice, _vkSwapChain, UINT64_MAX, _imageAvailableSemaphore, VK_NULL_HANDLE,
+        vkAcquireNextImageKHR(_vkDevice, _vkSwapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE,
                               &imageIndex);
 
         // Record the command buffer
-        vkResetCommandBuffer(_commandBuffer, 0);
-        recordCommandBuffer(_commandBuffer, imageIndex);
+        vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
+        recordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
 
         // Submit the command buffer
         VkSubmitInfo submitInfo{};
@@ -158,7 +162,7 @@ private:
         // Specifies which semaphores to wait on before execution begin
         // the pipeline to wait in which in our cases is writing the color
         // attachment
-        VkSemaphore waitSemaphores[]      = { _imageAvailableSemaphore };
+        VkSemaphore waitSemaphores[]      = { _imageAvailableSemaphores[_currentFrame] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount     = 1;
         submitInfo.pWaitSemaphores        = waitSemaphores;
@@ -166,16 +170,16 @@ private:
 
         // Specify which command buffers to submit for execution
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers    = &_commandBuffer;
+        submitInfo.pCommandBuffers    = &_commandBuffers[_currentFrame];
 
         // Specify which semaphores to signal once command is finished executing
-        VkSemaphore signalSemaphores[]  = { _renderingFinishedSemaphore };
+        VkSemaphore signalSemaphores[]  = { _renderingFinishedSemaphores[_currentFrame] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores    = signalSemaphores;
 
         // Submit the queue
         // The fence is optional providing signalling when the command buffers finish execution
-        if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _inFlightFence) != VK_SUCCESS)
+        if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]) != VK_SUCCESS)
         {
             throw std::runtime_error("There was an error submitting the command buffer");
         }
@@ -196,10 +200,13 @@ private:
         presentInfoKhr.pResults = nullptr; // Optional used to get result of each swap chain exec
 
         vkQueuePresentKHR(_presentQueue, &presentInfoKhr);
+
+        _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
-    void createCommandBuffer()
+    void createCommandBuffers()
     {
+        _commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         /// Clean up automatically when command pool is freed
         /// so no need for explicit cleanup
 
@@ -209,9 +216,9 @@ private:
         allocateInfo.commandPool = _commandPool;
         allocateInfo.level =
             VK_COMMAND_BUFFER_LEVEL_PRIMARY; // Can be submitted directly but cannot be shared by another queue
-        allocateInfo.commandBufferCount = 1;
+        allocateInfo.commandBufferCount = static_cast<uint32_t>(_commandBuffers.size());
 
-        if (vkAllocateCommandBuffers(_vkDevice, &allocateInfo, &_commandBuffer) != VK_SUCCESS)
+        if (vkAllocateCommandBuffers(_vkDevice, &allocateInfo, _commandBuffers.data()) != VK_SUCCESS)
         {
             throw std::runtime_error("There was an error allocating command buffer(s)");
         }
@@ -219,6 +226,11 @@ private:
 
     void createSyncObjects()
     {
+        _imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        // FIX: Submit/Rendering finished semaphore must not
+        _renderingFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        _inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
         VkSemaphoreCreateInfo semaphoreCreateInfo{};
         semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -229,11 +241,16 @@ private:
         // indefinitely on the first frame. To work around this, we need to create the fence in signaled state
         fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        if (vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_imageAvailableSemaphore) != VK_SUCCESS ||
-            vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_renderingFinishedSemaphore) != VK_SUCCESS ||
-            vkCreateFence(_vkDevice, &fenceCreateInfo, nullptr, &_inFlightFence) != VK_SUCCESS)
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            throw std::runtime_error("There was an error creating the semaphores");
+            if (vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_imageAvailableSemaphores[i]) !=
+                    VK_SUCCESS ||
+                vkCreateSemaphore(_vkDevice, &semaphoreCreateInfo, nullptr, &_renderingFinishedSemaphores[i]) !=
+                    VK_SUCCESS ||
+                vkCreateFence(_vkDevice, &fenceCreateInfo, nullptr, &_inFlightFences[i]) != VK_SUCCESS)
+            {
+                throw std::runtime_error("There was an error creating the semaphores");
+            }
         }
     }
 
@@ -268,7 +285,7 @@ private:
         // Begin the render pass
         // CONTENTS_INLINE -> Commands are embedded in the primary command buffer and there will be no secondary
         // COMMAND BUFFERS
-        vkCmdBeginRenderPass(_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(_commandBuffers[_currentFrame], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         ////////////////////////////////////////////
         /// GRAPHICS PIPELINE BINDING
@@ -1249,13 +1266,14 @@ private:
     VkPipelineLayout _pipelineLayout{};
     VkPipeline _graphicsPipeline{};
     VkCommandPool _commandPool{};
-    VkCommandBuffer _commandBuffer{};
+    std::vector<VkCommandBuffer> _commandBuffers{};
     std::vector<VkFramebuffer> _swapChainFramebuffers;
+    uint32_t _currentFrame{ 0 };
 
     /// Synchronization
     // Semaphore for swap chain image acquire and rendering
-    VkSemaphore _imageAvailableSemaphore{}, _renderingFinishedSemaphore{};
-    VkFence _inFlightFence{}; // Fence for syncing frame renders
+    std::vector<VkSemaphore> _imageAvailableSemaphores{}, _renderingFinishedSemaphores{};
+    std::vector<VkFence> _inFlightFences{}; // Fence for syncing frame renders
 
     // Swapchain support
     std::vector<const char*> deviceExtensions = {
