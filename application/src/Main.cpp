@@ -96,6 +96,9 @@ private:
             }
             drawFrame();
         }
+        // Since vk is asynchronous, drawing might be still going on when program terminates
+        // so to prevent errors we need to wait on the logical device before destroying and cleaning up
+        vkDeviceWaitIdle(_vkDevice);
     }
 
     void cleanUp()
@@ -176,6 +179,23 @@ private:
         {
             throw std::runtime_error("There was an error submitting the command buffer");
         }
+
+        // Presentation
+        VkPresentInfoKHR presentInfoKhr{};
+        presentInfoKhr.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        // Wait for the command buffer ot finish executing(signaled via signalSemaphore)
+        // before presenting
+        presentInfoKhr.waitSemaphoreCount = 1;
+        presentInfoKhr.pWaitSemaphores    = signalSemaphores;
+
+        VkSwapchainKHR swapChains[]   = { _vkSwapChain };
+        presentInfoKhr.swapchainCount = 1;
+        presentInfoKhr.pSwapchains    = swapChains;
+        presentInfoKhr.pImageIndices  = &imageIndex;
+
+        presentInfoKhr.pResults = nullptr; // Optional used to get result of each swap chain exec
+
+        vkQueuePresentKHR(_presentQueue, &presentInfoKhr);
     }
 
     void createCommandBuffer()
@@ -557,6 +577,24 @@ private:
         renderPassCreateInfo.pAttachments    = &colorAttachment;
         renderPassCreateInfo.subpassCount    = 1;
         renderPassCreateInfo.pSubpasses      = &subpass;
+
+        // Subpass dependency
+        VkSubpassDependency subpassDependency{};
+        subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL; // Refers to the implicit "before" subpass
+        subpassDependency.dstSubpass = 0;                   // Refers to our subpass
+
+        // Which stage to wait on
+        // Wait for the swap chain to finish reading from the image before we can access it
+        subpassDependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpassDependency.srcAccessMask = 0;
+
+        // Operation on the color attachment stage should wait on this
+        subpassDependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        // add dependencies to render pass
+        renderPassCreateInfo.dependencyCount = 1;
+        renderPassCreateInfo.pDependencies   = &subpassDependency;
 
         if (vkCreateRenderPass(_vkDevice, &renderPassCreateInfo, nullptr, &_renderPass) != VK_SUCCESS)
         {
