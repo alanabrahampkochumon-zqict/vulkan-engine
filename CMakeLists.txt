@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.28)
-project(VulkanEngine LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.31)
+project("Game Engine" LANGUAGES CXX)
 enable_testing()
 
 
@@ -76,18 +76,8 @@ option(ASAN "Enable ASan" OFF) # Option to enable ASAN
 
 # Enables Strict Warnings and Debug-only ASan
 if (ENABLE_STRICT)
-    message(STATUS "Configuring Strict Warnings")
-    if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(StrictWarnings INTERFACE
-                $<$<COMPILE_LANGUAGE:CXX>:/WX;/W4;/permissive-;/fp:strict>
-        )
-    else ()
-        target_compile_options(StrictWarnings INTERFACE
-                $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Werror;-pedantic-errors>
-                $<$<CXX_COMPILER_ID:Clang>:-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-pre-c++14-compat;-Wno-pre-c++17-compat;-Wno-c++20-compat>
-                $<$<CXX_COMPILER_ID:AppleClang>:-Wno-c++98-compat;-Wno-c++98-compat-pedantic;-Wno-pre-c++14-compat;-Wno-pre-c++17-compat;-Wno-c++20-compat>
-        )
-    endif ()
+    include(cmake/StrictMode.cmake)
+    AddStrictMode(StrictWarnings)
 endif ()
 
 

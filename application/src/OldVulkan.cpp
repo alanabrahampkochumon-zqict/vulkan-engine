@@ -1293,20 +1293,20 @@ private:
         VK_KHR_SWAPCHAIN_EXTENSION_NAME // "VK_KHR_swapchain
     };
 };
-
-int main()
-{
-    HelloTriangleApplication app{};
-
-    try
-    {
-        app.run();
-    }
-    catch (const std::exception& e)
-    {
-        SDL_Log("%s\n", e.what());
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
-}
+//
+// int main()
+// {
+//     HelloTriangleApplication app{};
+//
+//     try
+//     {
+//         app.run();
+//     }
+//     catch (const std::exception& e)
+//     {
+//         SDL_Log("%s\n", e.what());
+//         return EXIT_FAILURE;
+//     }
+//
+//     return EXIT_SUCCESS;
+// }

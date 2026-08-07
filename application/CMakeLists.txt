@@ -1,41 +1,41 @@
 add_executable(
-        VulkanEngine
+        GameEngine
 
-        src/Main.cpp
-        src/FileReader.h
+        # src/OldVulkan.cpp
+        Main.cpp
 )
-target_compile_features(VulkanEngine PUBLIC cxx_std_23)
+target_compile_features(GameEngine PUBLIC cxx_std_23)
 
-target_sources(VulkanEngine PRIVATE
+target_sources(GameEngine PRIVATE
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
         FILES
         src/FileReader.h
 )
 
-target_include_directories(VulkanEngine PRIVATE
+target_include_directories(GameEngine PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
-add_subdirectory(renderer)
+add_subdirectory(engine)
 
 target_link_libraries(
-        VulkanEngine
+        GameEngine
         PRIVATE
-        StrictWarnings
+        # StrictWarnings
         SDL3::SDL3-static
         ${Vulkan_LIBRARIES}
 
-        VulkanRenderer
+        VulkanEngine
 )
 
 
 add_custom_command(
-        TARGET VulkanEngine
+        TARGET GameEngine
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E
         copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders"
-        "$<TARGET_FILE_DIR:VulkanEngine>/shaders"
+        "$<TARGET_FILE_DIR:GameEngine>/shaders"
         COMMENT "Copying shaders to build directory"
 )
