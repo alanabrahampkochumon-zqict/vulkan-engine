@@ -17,12 +17,16 @@ target_include_directories(VulkanEngine PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
+add_subdirectory(renderer)
+
 target_link_libraries(
         VulkanEngine
         PRIVATE
         StrictWarnings
         SDL3::SDL3-static
         ${Vulkan_LIBRARIES}
+
+        VulkanRenderer
 )
 
 

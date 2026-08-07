@@ -42,7 +42,7 @@
             "inherits": "base-windows",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_C_COMPILER": "clang-cl"
             }
         },
@@ -52,7 +52,7 @@
             "inherits": "base-windows",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_C_COMPILER": "clang-cl"
             }
         }
