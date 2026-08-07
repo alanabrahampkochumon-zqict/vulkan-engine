@@ -11,9 +11,6 @@ endif ()
 # Add include directories
 include_directories(${Vulkan_INCLUDE_DIRS})
 
-# Enable Vulkan Validation
-
-
 
 add_library(StrictWarnings INTERFACE) # Used for linking Warning flags
 add_library(ProjectASan INTERFACE) # Used for linking ASan
@@ -115,7 +112,6 @@ endif ()
 include(dependencies.cmake)
 
 add_subdirectory(test-suite)
-add_subdirectory(benchmark-suite)
 add_subdirectory(application)
 
 
