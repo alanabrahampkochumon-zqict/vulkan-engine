@@ -1,5 +1,5 @@
 /**
- * @file VulkanEngine.cpp
+ * @file TempestEngine.cpp
  * @author Alan Abraham P Kochumon
  * @date Created on: August 7, 2026
  *
@@ -9,10 +9,14 @@
  */
 
 module;
+#include <format>
 #include <print>
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+
 #include <sdl3/SDL.h>
+#include <sdl3/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
 module Engine;
 
@@ -22,9 +26,9 @@ namespace engine
     void TempestEngine::init()
     {
         // TODO: Move to parameter
-        std::string appName    = "Tempest Game Engine";
-        std::string appVersion = "0.0.1";
-        std::string appId      = "com.tempest.engine";
+        appName      = "Tempest Game Engine";
+        appVersion   = "0.0.1";
+        appId        = "com.tempest.engine";
         size_t width = 1280, height = 720;
 
         SDL_SetAppMetadata(appName.c_str(), appVersion.c_str(), appId.c_str());
@@ -33,7 +37,7 @@ namespace engine
             SDL_Log("Cannot initialize SDL window");
         }
 
-        auto window = SDL_CreateWindow(appName.c_str(), width, height, SDL_WINDOW_VULKAN);
+        window = SDL_CreateWindow(appName.c_str(), width, height, SDL_WINDOW_VULKAN);
 
         SDL_Event event;
         bool running = true;
@@ -50,7 +54,33 @@ namespace engine
                 }
             }
         }
+        initVulkan();
     }
     void TempestEngine::run() { std::println("Engine is running"); }
-    void TempestEngine::cleanup() { std::println("Engine is closing..."); }
+    void TempestEngine::cleanup() { SDL_DestroyWindow(window); }
+
+
+    void TempestEngine::initVulkan()
+    {
+        const vk::ApplicationInfo applicationInfo{ .pApplicationName   = appName.c_str(),
+                                                   .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+                                                   .pEngineName        = ENGINE_NAME.c_str(),
+                                                   .engineVersion      = VK_MAKE_VERSION(0, 0, 1),
+                                                   .apiVersion         = vk::ApiVersion13 };
+
+
+        uint32_t extensionCount{ 0 };
+        const auto extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+        for (size_t i = 0; i < extensionCount; ++i)
+        {
+            SDL_Log(std::format("Extension {}: {}", i, extensions[i]).c_str());
+        }
+        const vk::InstanceCreateInfo instanceCreateInfo{
+            .pApplicationInfo        = &applicationInfo,
+            .enabledExtensionCount   = extensionCount,
+            .ppEnabledExtensionNames = extensions,
+        };
+
+        instance = vk::raii::Instance(context, instanceCreateInfo);
+    }
 } // namespace engine
