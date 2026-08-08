@@ -1,21 +1,26 @@
-add_library(VulkanEngine OBJECT)
+add_library(TempestEngine OBJECT)
 
-target_compile_features(VulkanEngine PUBLIC cxx_std_23)
+target_compile_features(TempestEngine PUBLIC cxx_std_23)
 
 target_sources(
-        VulkanEngine
+        TempestEngine
         PRIVATE
-        VulkanEngine.cpp
+        TempestEngine.cpp
+        GEWindow.cpp
+        ${vulkanhpp_SOURCE_DIR}
 
         PUBLIC
         FILE_SET CXX_MODULES
         FILES
-        VulkanEngine.cppm
+        TempestEngine.cppm
+        GEWindow.cppm
 )
 
+
 target_link_libraries(
-        VulkanEngine PRIVATE
+        TempestEngine PRIVATE
 
         # StrictWarnings
         SDL3::SDL3-static
+        Vulkan::Headers
 )

@@ -22,11 +22,11 @@ add_subdirectory(engine)
 target_link_libraries(
         GameEngine
         PRIVATE
-        # StrictWarnings
+         StrictWarnings
         SDL3::SDL3-static
-        ${Vulkan_LIBRARIES}
+#        ${Vulkan_LIBRARIES}
 
-        VulkanEngine
+        TempestEngine
 )
 
 

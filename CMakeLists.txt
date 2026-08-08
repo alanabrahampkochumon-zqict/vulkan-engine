@@ -4,11 +4,11 @@ enable_testing()
 
 
 # Vulkan
-find_package(Vulkan REQUIRED)
-if (NOT Vulkan_FOUND)
-    message(WARNING "Vulkan SDK not found! Make sure you have vulkan installed and put in the system path")
-endif ()
-# Add include directories
+#find_package(Vulkan REQUIRED)
+#if (NOT Vulkan_FOUND)
+#    message(WARNING "Vulkan SDK not found! Make sure you have vulkan installed and put in the system path")
+#endif ()
+## Add include directories
 include_directories(${Vulkan_INCLUDE_DIRS})
 
 

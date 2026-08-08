@@ -2,7 +2,7 @@ export module Engine; // TODO: Rename Later
 
 namespace engine
 {
-    export class VulkanEngine
+    export class TempestEngine
     {
     public:
         void init();

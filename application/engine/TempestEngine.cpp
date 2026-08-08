@@ -10,12 +10,15 @@
 
 module;
 #include <print>
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include <vulkan/vulkan.hpp>
 
 module Engine;
 
+
 namespace engine
 {
-    void VulkanEngine::init() { std::println("Starting engine"); }
-    void VulkanEngine::run() { std::println("Engine is running"); }
-    void VulkanEngine::cleanup() { std::println("Engine is closing..."); }
+    void TempestEngine::init() { std::println("Starting engine"); }
+    void TempestEngine::run() { std::println("Engine is running"); }
+    void TempestEngine::cleanup() { std::println("Engine is closing..."); }
 } // namespace engine
