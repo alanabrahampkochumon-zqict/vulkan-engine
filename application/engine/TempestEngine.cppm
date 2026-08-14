@@ -14,8 +14,8 @@ namespace engine
     {
     public:
         TempestEngine() = default;
-        void init(const std::string& applicationName, const std::string& version, const std::string& id,
-                  size_t width, size_t height);
+        void init(const std::string& applicationName, const std::string& version, const std::string& id, size_t width,
+                  size_t height);
         void run();
         void cleanup() const;
 
@@ -27,7 +27,6 @@ namespace engine
 
 
         std::string appName{}, appVersion{}, appId{};
-
         size_t width{}, height{};
 
 
@@ -35,8 +34,16 @@ namespace engine
 
         vk::raii::Context context{};
         vk::raii::Instance instance{ nullptr };
+        std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
 
         std::string ENGINE_NAME{ "Tempest" };
+
+
+#ifdef NDEBUG
+        static constexpr bool enableValidationLayers = false;
+#else
+        static constexpr bool enableValidationLayers = true;
+#endif
     };
 
 } // namespace engine

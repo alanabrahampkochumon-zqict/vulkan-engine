@@ -41,12 +41,14 @@ namespace engine
         window = SDL_CreateWindow(appName.c_str(), this->width, this->height, SDL_WINDOW_VULKAN);
 
         initVulkan();
-
-        handleEvents();
     }
 
 
-    void TempestEngine::run() { std::println("Engine is running"); }
+    void TempestEngine::run()
+    {
+        std::println("Engine is running");
+        handleEvents();
+    }
 
 
     void TempestEngine::cleanup() const
@@ -87,12 +89,30 @@ namespace engine
             SDL_Log("%s", message.c_str());
         }
 
+        // Put a list of required layers
+        std::vector<const char*> requiredLayers;
+        if (enableValidationLayers)
+        {
+            requiredLayers.assign(validationLayers.begin(), validationLayers.end());
+        }
 
-        const vk::InstanceCreateInfo instanceCreateInfo{
-            .pApplicationInfo        = &applicationInfo,
-            .enabledExtensionCount   = extensionCount,
-            .ppEnabledExtensionNames = requiredExtensions,
-        };
+        // Enumerate through each layer and determine if the layers we need are supported
+        const auto supportedLayers = context.enumerateInstanceLayerProperties();
+        const auto unsupportedLayers =
+            std::ranges::find_if(requiredLayers, [&supportedLayers](const auto& requiredLayer) {
+                return std::ranges::none_of(supportedLayers, [requiredLayer](const auto& layerProperty) {
+                    return strcmp(layerProperty.layerName, requiredLayer) == 0;
+                });
+            });
+        if (unsupportedLayers != requiredLayers.end())
+        {
+            throw std::runtime_error("Required layer not supported: " + std::string(*unsupportedLayers));
+        }
+
+
+        const vk::InstanceCreateInfo instanceCreateInfo{ .pApplicationInfo        = &applicationInfo,
+                                                         .enabledExtensionCount   = extensionCount,
+                                                         .ppEnabledExtensionNames = requiredExtensions };
 
         instance = vk::raii::Instance(context, instanceCreateInfo);
     }
