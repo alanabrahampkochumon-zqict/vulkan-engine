@@ -17,10 +17,13 @@ namespace engine
         void init(const std::string& applicationName, const std::string& version, const std::string& id,
                   size_t width, size_t height);
         void run();
-        void cleanup();
+        void cleanup() const;
 
     private:
+        void handleEvents();
         void initVulkan();
+
+        void createVulkanInstance();
 
 
         std::string appName{}, appVersion{}, appId{};

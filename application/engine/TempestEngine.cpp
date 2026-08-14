@@ -40,6 +40,66 @@ namespace engine
 
         window = SDL_CreateWindow(appName.c_str(), this->width, this->height, SDL_WINDOW_VULKAN);
 
+        initVulkan();
+
+        handleEvents();
+    }
+
+
+    void TempestEngine::run() { std::println("Engine is running"); }
+
+
+    void TempestEngine::cleanup() const
+    {
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+    }
+
+
+    void TempestEngine::initVulkan() { createVulkanInstance(); }
+
+
+    void TempestEngine::createVulkanInstance()
+    {
+        const vk::ApplicationInfo applicationInfo{ .pApplicationName   = appName.c_str(),
+                                                   .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+                                                   .pEngineName        = ENGINE_NAME.c_str(),
+                                                   .engineVersion      = VK_MAKE_VERSION(0, 0, 1),
+                                                   .apiVersion         = vk::ApiVersion13 };
+
+
+        uint32_t extensionCount{ 0 };
+        const auto requiredExtensions  = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+        const auto extensionProperties = context.enumerateInstanceExtensionProperties();
+
+        // Check if the extension we require are support by vulkan
+        for (uint32_t i = 0; i < extensionCount; ++i)
+        {
+            if (std::ranges::none_of(extensionProperties,
+                                     [sdlExtension = requiredExtensions[i]](const auto& extensionProperty) {
+                                         return strcmp(extensionProperty.extensionName, sdlExtension) == 0;
+                                     }))
+            {
+                throw std::runtime_error("Required SDL extension not supported:" + std::string(requiredExtensions[i]));
+            }
+
+            const auto message = std::format("Extension {}: {}", i, requiredExtensions[i]);
+            SDL_Log("%s", message.c_str());
+        }
+
+
+        const vk::InstanceCreateInfo instanceCreateInfo{
+            .pApplicationInfo        = &applicationInfo,
+            .enabledExtensionCount   = extensionCount,
+            .ppEnabledExtensionNames = requiredExtensions,
+        };
+
+        instance = vk::raii::Instance(context, instanceCreateInfo);
+    }
+
+
+    void TempestEngine::handleEvents()
+    {
         SDL_Event event;
         bool running = true;
         while (running)
@@ -50,39 +110,12 @@ namespace engine
                 {
                     case SDL_EVENT_QUIT:
                         running = false;
+                        break;
                     default:
-                        SDL_Log("Unhandled event!");
+                        break;
+                        // SDL_Log("Unhandled event!");
                 }
             }
         }
-        initVulkan();
-    }
-    void TempestEngine::run() { std::println("Engine is running"); }
-    void TempestEngine::cleanup() { SDL_DestroyWindow(window); }
-
-
-    void TempestEngine::initVulkan()
-    {
-        const vk::ApplicationInfo applicationInfo{ .pApplicationName   = appName.c_str(),
-                                                   .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
-                                                   .pEngineName        = ENGINE_NAME.c_str(),
-                                                   .engineVersion      = VK_MAKE_VERSION(0, 0, 1),
-                                                   .apiVersion         = vk::ApiVersion13 };
-
-
-        uint32_t extensionCount{ 0 };
-        const auto extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
-        for (size_t i = 0; i < extensionCount; ++i)
-        {
-            const auto message = std::format("Extension {}: {}", i, extensions[i]);
-            SDL_Log("%s", message.c_str());
-        }
-        const vk::InstanceCreateInfo instanceCreateInfo{
-            .pApplicationInfo        = &applicationInfo,
-            .enabledExtensionCount   = extensionCount,
-            .ppEnabledExtensionNames = extensions,
-        };
-
-        instance = vk::raii::Instance(context, instanceCreateInfo);
     }
 } // namespace engine
