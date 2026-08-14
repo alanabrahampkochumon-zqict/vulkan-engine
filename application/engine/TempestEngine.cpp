@@ -18,18 +18,19 @@ module;
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
-module Engine;
+module TempestEngine;
 
 
 namespace engine
 {
-    void TempestEngine::init()
+    void TempestEngine::init(const std::string& applicationName, const std::string& version, const std::string& id,
+                             const size_t width, const size_t height)
     {
-        // TODO: Move to parameter
-        appName      = "Tempest Game Engine";
-        appVersion   = "0.0.1";
-        appId        = "com.tempest.engine";
-        size_t width = 1280, height = 720;
+        appName      = applicationName;
+        appVersion   = version;
+        appId        = id;
+        this->width  = width;
+        this->height = height;
 
         SDL_SetAppMetadata(appName.c_str(), appVersion.c_str(), appId.c_str());
         if (!SDL_Init(SDL_INIT_VIDEO))
@@ -37,7 +38,7 @@ namespace engine
             SDL_Log("Cannot initialize SDL window");
         }
 
-        window = SDL_CreateWindow(appName.c_str(), width, height, SDL_WINDOW_VULKAN);
+        window = SDL_CreateWindow(appName.c_str(), this->width, this->height, SDL_WINDOW_VULKAN);
 
         SDL_Event event;
         bool running = true;
@@ -73,7 +74,8 @@ namespace engine
         const auto extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
         for (size_t i = 0; i < extensionCount; ++i)
         {
-            SDL_Log(std::format("Extension {}: {}", i, extensions[i]).c_str());
+            const auto message = std::format("Extension {}: {}", i, extensions[i]);
+            SDL_Log("%s", message.c_str());
         }
         const vk::InstanceCreateInfo instanceCreateInfo{
             .pApplicationInfo        = &applicationInfo,
