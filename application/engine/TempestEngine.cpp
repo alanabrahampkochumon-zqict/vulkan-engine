@@ -13,6 +13,7 @@ module;
 #include <print>
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 
+#include <map>
 #include <sdl3/SDL.h>
 #include <sdl3/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
@@ -58,7 +59,11 @@ namespace engine
     }
 
 
-    void TempestEngine::initVulkan() { createVulkanInstance(); }
+    void TempestEngine::initVulkan()
+    {
+        createVulkanInstance();
+        pickPhysicalDevice();
+    }
 
 
     void TempestEngine::createVulkanInstance()
@@ -141,6 +146,78 @@ namespace engine
                                                                    .messageType     = messageType,
                                                                    .pfnUserCallback = &debugCallback };
         debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsCreateInfo);
+    }
+
+
+    void TempestEngine::pickPhysicalDevice()
+    {
+        /// Properties represent the details about the device like name, vulkan version support etc.
+        /// Features represent the feature-set supported by the device like certain shader support
+        const auto physicalDevices = vk::raii::PhysicalDevices(instance);
+
+        if (physicalDevices.empty())
+            throw std::runtime_error("No Graphics card supporting vulkan found!");
+
+        std::multimap<uint32_t, vk::raii::PhysicalDevice> gpus;
+
+        for (const auto& pd : physicalDevices)
+        {
+            const auto properties = pd.getProperties();
+            uint32_t score        = 0;
+
+            // Support at least vulkan 1.3
+            if (properties.apiVersion < vk::ApiVersion13)
+                continue;
+
+            // Must have graphics queue
+            auto queueFamilies   = pd.getQueueFamilyProperties2();
+            bool supportGraphics = std::ranges::any_of(queueFamilies, [](const auto& queueFamily) {
+                return !!(queueFamily.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics);
+            });
+            if (!supportGraphics)
+                continue;
+
+            // Must have required extensions
+            std::vector<const char*> requiredExtensions = { vk::KHRSwapchainExtensionName };
+            const auto supportedExtensions              = pd.enumerateDeviceExtensionProperties();
+            bool supportsAllRequiredExtensions =
+                std::ranges::all_of(requiredExtensions, [&supportedExtensions](const auto& requiredExtension) {
+                    return std::ranges::any_of(
+                        supportedExtensions, [requiredExtension](const auto& supportedExtension) {
+                            return std::strcmp(supportedExtension.extensionName, requiredExtension);
+                        });
+                });
+            if (!supportsAllRequiredExtensions)
+                continue;
+
+            // Must have some features like dynamic render
+            const auto devFeatures = pd.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
+                                                     vk::PhysicalDeviceVulkan13Features,
+                                                     vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+            const auto requiredFeatures = devFeatures.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
+                devFeatures.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+                devFeatures.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+            if (!requiredFeatures)
+                continue;
+
+
+            // Discrete GPU is preferred
+            if (properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu)
+                score += 1000;
+
+
+            // Sort by highest supported texture dimenension
+            score += properties.limits.maxImageDimension3D;
+
+            gpus.insert(std::make_pair(score, pd));
+        }
+
+        // If there is a gpu and score is greater than 0 for the last GPU (which gives the GPU with the highest score)
+        // use that gpu
+        if (!gpus.empty() && gpus.rbegin()->first > 0)
+            physicalDevice = gpus.rbegin()->second;
+        else
+            throw std::runtime_error("No appropriate graphics card found!");
     }
 
 

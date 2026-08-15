@@ -28,6 +28,7 @@ namespace engine
                       const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
         void createVulkanInstance();
         void setupDebugMessenger();
+        void pickPhysicalDevice();
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -40,6 +41,7 @@ namespace engine
         vk::raii::Instance instance{ nullptr };
         std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
         vk::DebugUtilsMessengerEXT debugMessenger{};
+        vk::PhysicalDevice physicalDevice{};
 
         std::string ENGINE_NAME{ "Tempest" };
 
