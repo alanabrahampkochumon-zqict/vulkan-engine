@@ -69,33 +69,33 @@ namespace engine
                                                    .engineVersion      = VK_MAKE_VERSION(0, 0, 1),
                                                    .apiVersion         = vk::ApiVersion13 };
 
-
-        uint32_t extensionCount{ 0 };
-        const auto requiredExtensions  = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+        //------------
+        // EXTENSIONS
+        //------------
+        const auto requiredExtensions  = getRequiredExtensions();
         const auto extensionProperties = context.enumerateInstanceExtensionProperties();
 
         // Check if the extension we require are support by vulkan
-        for (uint32_t i = 0; i < extensionCount; ++i)
+        auto unsupportedPropertiesIt =
+            std::ranges::find_if(requiredExtensions, [&extensionProperties](const auto& requiredExtension) {
+                return std::ranges::none_of(extensionProperties, [requiredExtension](const auto& extensionProperty) {
+                    return strcmp(extensionProperty.extensionName, requiredExtension) == 0;
+                });
+            });
+        if (unsupportedPropertiesIt != requiredExtensions.end())
         {
-            if (std::ranges::none_of(extensionProperties,
-                                     [sdlExtension = requiredExtensions[i]](const auto& extensionProperty) {
-                                         return strcmp(extensionProperty.extensionName, sdlExtension) == 0;
-                                     }))
-            {
-                throw std::runtime_error("Required SDL extension not supported:" + std::string(requiredExtensions[i]));
-            }
-
-            const auto message = std::format("Extension {}: {}", i, requiredExtensions[i]);
-            SDL_Log("%s", message.c_str());
+            throw std::runtime_error(std::format("Required extension not supported! {}", *unsupportedPropertiesIt));
         }
 
-        // Put a list of required layers
+
+        //--------
+        // LAYERS
+        //--------
         std::vector<const char*> requiredLayers;
         if (enableValidationLayers)
         {
             requiredLayers.assign(validationLayers.begin(), validationLayers.end());
         }
-
         // Enumerate through each layer and determine if the layers we need are supported
         const auto supportedLayers = context.enumerateInstanceLayerProperties();
         const auto unsupportedLayers =
@@ -104,17 +104,34 @@ namespace engine
                     return strcmp(layerProperty.layerName, requiredLayer) == 0;
                 });
             });
+
         if (unsupportedLayers != requiredLayers.end())
         {
             throw std::runtime_error("Required layer not supported: " + std::string(*unsupportedLayers));
         }
 
 
-        const vk::InstanceCreateInfo instanceCreateInfo{ .pApplicationInfo        = &applicationInfo,
-                                                         .enabledExtensionCount   = extensionCount,
-                                                         .ppEnabledExtensionNames = requiredExtensions };
+        //-------------------
+        // INSTANCE CREATION
+        //-------------------
+        const vk::InstanceCreateInfo instanceCreateInfo{
+            .pApplicationInfo        = &applicationInfo,
+            .enabledLayerCount       = static_cast<uint32_t>(requiredLayers.size()),
+            .ppEnabledLayerNames     = requiredLayers.data(),
+            .enabledExtensionCount   = static_cast<uint32_t>(requiredExtensions.size()),
+            .ppEnabledExtensionNames = requiredExtensions.data(),
+        };
 
         instance = vk::raii::Instance(context, instanceCreateInfo);
+    }
+
+
+    std::vector<const char*> TempestEngine::getRequiredExtensions() noexcept
+    {
+        uint32_t extensionCount = 0;
+        auto sdlExtensions      = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+        std::vector extension(sdlExtensions, sdlExtensions + extensionCount);
+        return extension;
     }
 
 

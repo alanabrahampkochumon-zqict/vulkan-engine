@@ -6,7 +6,7 @@ module;
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
-export module TempestEngine; // TODO: Rename Later
+export module TempestEngine;
 
 namespace engine
 {
@@ -22,6 +22,7 @@ namespace engine
     private:
         void handleEvents();
         void initVulkan();
+        static std::vector<const char*> getRequiredExtensions() noexcept;
 
         void createVulkanInstance();
 
