@@ -23,8 +23,11 @@ namespace engine
         void handleEvents();
         void initVulkan();
         static std::vector<const char*> getRequiredExtensions() noexcept;
-
+        static VKAPI_ATTR vk::Bool32 VKAPI_CALL
+        debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT type,
+                      const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
         void createVulkanInstance();
+        void setupDebugMessenger();
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -36,6 +39,7 @@ namespace engine
         vk::raii::Context context{};
         vk::raii::Instance instance{ nullptr };
         std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
+        vk::DebugUtilsMessengerEXT debugMessenger{};
 
         std::string ENGINE_NAME{ "Tempest" };
 

@@ -126,12 +126,47 @@ namespace engine
     }
 
 
+    void TempestEngine::setupDebugMessenger()
+    {
+        if (!enableValidationLayers)
+            return;
+        constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags{
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+        };
+        constexpr vk::DebugUtilsMessageTypeFlagsEXT messageType{ vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+                                                                 vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                                                                 vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral };
+
+        vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo{ .messageSeverity = severityFlags,
+                                                                   .messageType     = messageType,
+                                                                   .pfnUserCallback = &debugCallback };
+        debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsCreateInfo);
+    }
+
+
     std::vector<const char*> TempestEngine::getRequiredExtensions() noexcept
     {
         uint32_t extensionCount = 0;
         auto sdlExtensions      = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
-        std::vector extension(sdlExtensions, sdlExtensions + extensionCount);
-        return extension;
+        std::vector extensions(sdlExtensions, sdlExtensions + extensionCount);
+        // Setup up the debug callback extension
+        if (enableValidationLayers)
+            extensions.push_back(vk::EXTDebugUtilsExtensionName);
+        return extensions;
+    }
+
+    VKAPI_ATTR vk::Bool32 VKAPI_CALL TempestEngine::debugCallback(
+        const vk::DebugUtilsMessageSeverityFlagBitsEXT severity, const vk::DebugUtilsMessageTypeFlagsEXT type,
+        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+    {
+        if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+        {
+            SDL_Log(
+                "%s",
+                std::format("Validation Layer(type: {})\nMessage:\n{}\n", vk::to_string(type), pCallbackData->pMessage)
+                    .c_str());
+        }
+        return vk::False;
     }
 
 
