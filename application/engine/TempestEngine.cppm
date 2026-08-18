@@ -28,6 +28,7 @@ namespace engine
                       const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
         void createVulkanInstance();
         void setupDebugMessenger();
+        void createSurface();
         void pickPhysicalDevice();
         void createLogicalDevice();
 
@@ -46,6 +47,7 @@ namespace engine
         vk::raii::Device device{ nullptr };
         vk::raii::Queue graphicsQueue{ nullptr };
         vk::PhysicalDeviceFeatures deviceFeatures{};
+        vk::raii::SurfaceKHR surface{ nullptr };
 
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };

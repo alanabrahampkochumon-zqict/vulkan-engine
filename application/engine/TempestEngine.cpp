@@ -66,7 +66,10 @@ namespace engine
     void TempestEngine::initVulkan()
     {
         createVulkanInstance();
+        setupDebugMessenger();
+        createSurface();
         pickPhysicalDevice();
+        createLogicalDevice();
     }
 
 
@@ -150,6 +153,17 @@ namespace engine
                                                                    .messageType     = messageType,
                                                                    .pfnUserCallback = &debugCallback };
         debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsCreateInfo);
+    }
+
+
+    void TempestEngine::createSurface()
+    {
+        VkSurfaceKHR surface;
+        if (!SDL_Vulkan_CreateSurface(window, *instance, nullptr, &surface))
+        {
+            throw std::runtime_error("There was an error creating vulkan surface.");
+        }
+        this->surface = vk::raii::SurfaceKHR(instance, surface);
     }
 
 
