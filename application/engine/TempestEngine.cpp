@@ -42,13 +42,17 @@ namespace engine
         window = SDL_CreateWindow(appName.c_str(), this->width, this->height, SDL_WINDOW_VULKAN);
 
         initVulkan();
+
+        _isRunning = true;
     }
 
 
     void TempestEngine::run()
     {
-        std::println("Engine is running");
-        handleEvents();
+        while (_isRunning)
+        {
+            handleEvents();
+        }
     }
 
 
@@ -232,6 +236,7 @@ namespace engine
         return extensions;
     }
 
+
     VKAPI_ATTR vk::Bool32 VKAPI_CALL TempestEngine::debugCallback(
         const vk::DebugUtilsMessageSeverityFlagBitsEXT severity, const vk::DebugUtilsMessageTypeFlagsEXT type,
         const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -250,20 +255,17 @@ namespace engine
     void TempestEngine::handleEvents()
     {
         SDL_Event event;
-        bool running = true;
-        while (running)
+
+        while (SDL_PollEvent(&event))
         {
-            while (SDL_PollEvent(&event))
+            switch (event.type)
             {
-                switch (event.type)
-                {
-                    case SDL_EVENT_QUIT:
-                        running = false;
-                        break;
-                    default:
-                        break;
-                        // SDL_Log("Unhandled event!");
-                }
+                case SDL_EVENT_QUIT:
+                    _isRunning = false;
+                    break;
+                default:
+                    break;
+                    // SDL_Log("Unhandled event!");
             }
         }
     }

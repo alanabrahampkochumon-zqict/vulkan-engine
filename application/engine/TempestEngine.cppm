@@ -44,6 +44,7 @@ namespace engine
         vk::PhysicalDevice physicalDevice{};
 
         std::string ENGINE_NAME{ "Tempest" };
+        bool _isRunning{ false };
 
 
 #ifdef NDEBUG
