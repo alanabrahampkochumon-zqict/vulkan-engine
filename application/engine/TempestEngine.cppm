@@ -29,6 +29,7 @@ namespace engine
         void createVulkanInstance();
         void setupDebugMessenger();
         void pickPhysicalDevice();
+        void createLogicalDevice();
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -41,7 +42,10 @@ namespace engine
         vk::raii::Instance instance{ nullptr };
         std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
         vk::DebugUtilsMessengerEXT debugMessenger{};
-        vk::PhysicalDevice physicalDevice{};
+        vk::raii::PhysicalDevice physicalDevice{ nullptr };
+        vk::raii::Device device{ nullptr };
+        vk::raii::Queue graphicsQueue{ nullptr };
+        vk::PhysicalDeviceFeatures deviceFeatures{};
 
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };

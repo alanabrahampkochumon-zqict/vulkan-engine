@@ -10,7 +10,7 @@
 
 module;
 #include <format>
-#include <print>
+
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 
 #include <map>
@@ -182,8 +182,8 @@ namespace engine
                 continue;
 
             // Must have required extensions
-            std::vector<const char*> requiredExtensions = { vk::KHRSwapchainExtensionName };
-            const auto supportedExtensions              = pd.enumerateDeviceExtensionProperties();
+            std::vector requiredExtensions = { vk::KHRSwapchainExtensionName };
+            const auto supportedExtensions = pd.enumerateDeviceExtensionProperties();
             bool supportsAllRequiredExtensions =
                 std::ranges::all_of(requiredExtensions, [&supportedExtensions](const auto& requiredExtension) {
                     return std::ranges::any_of(
@@ -225,10 +225,56 @@ namespace engine
     }
 
 
+    void TempestEngine::createLogicalDevice()
+    {
+        /// Request a device with graphics family queue
+        /// and vulkan 1.1 shaderDrawparams, dynamic rendering and extended dynamic state
+        /// Enable swap chain extension
+        auto queueProperties = physicalDevice.getQueueFamilyProperties();
+        const auto graphicsQueueFamilyProperty =
+            std::ranges::find_if(queueProperties, [](const auto& qFamilyProperties) {
+                return (qFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) != static_cast<vk::QueueFlags>(0);
+            });
+        const auto graphicsIndex =
+            static_cast<uint32_t>(std::distance(queueProperties.begin(), graphicsQueueFamilyProperty));
+
+        // We need to specify a priority even if we have only 1 queue
+        float queuePriority = 0.5f;
+        vk::DeviceQueueCreateInfo deviceQueueCreateInfo{ .queueFamilyIndex = graphicsIndex,
+                                                         .queueCount       = 1,
+                                                         .pQueuePriorities = &queuePriority };
+
+
+        /// Vulkan Feature request chain
+        /// Combine all the features required into a single struct without using pNext
+        vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
+                           vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
+            featureChain = {
+                {},                               // Vulkan 1.0 features
+                { .shaderDrawParameters = true }, // Vulkan 1.1 features
+                { .dynamicRendering = true },     // Vulkan 1.3 features
+                { .extendedDynamicState = true }  // Dynamic state
+            };
+
+        std::vector requiredDeviceExtensions{ vk::KHRSwapchainExtensionName };
+        vk::DeviceCreateInfo deviceCreateInfo{ .pNext                = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+                                               .queueCreateInfoCount = 1,
+                                               .pQueueCreateInfos    = &deviceQueueCreateInfo,
+                                               .enabledExtensionCount =
+                                                   static_cast<uint32_t>(requiredDeviceExtensions.size()),
+                                               .ppEnabledExtensionNames = requiredDeviceExtensions.data() };
+
+        device = vk::raii::Device(physicalDevice, deviceCreateInfo);
+
+        // Queue is automatically created with logical device
+        graphicsQueue = vk::raii::Queue(device, graphicsIndex, 0);
+    }
+
+
     std::vector<const char*> TempestEngine::getRequiredExtensions() noexcept
     {
-        uint32_t extensionCount = 0;
-        auto sdlExtensions      = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+        uint32_t extensionCount  = 0;
+        const auto sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
         std::vector extensions(sdlExtensions, sdlExtensions + extensionCount);
         // Setup up the debug callback extension
         if (enableValidationLayers)
