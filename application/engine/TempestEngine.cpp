@@ -70,6 +70,7 @@ namespace engine
         createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
+        createSwapChain();
     }
 
 
@@ -254,6 +255,7 @@ namespace engine
                 physicalDevice.getSurfaceSupportKHR(qFamilyIndex, *surface))
             {
                 queueIndex = qFamilyIndex;
+                break;
             }
         }
         if (queueIndex == ~0)
@@ -289,6 +291,104 @@ namespace engine
 
         // Queue is automatically created with logical device
         graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
+    }
+
+
+    void TempestEngine::createSwapChain()
+    {
+        vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(*surface);
+        swapChainExtent                                = chooseSwapExtent(surfaceCapabilities);
+        const uint32_t minImageCount                   = chooseMinImageCount(surfaceCapabilities);
+
+        const auto availableFormats      = physicalDevice.getSurfaceFormatsKHR(*surface);
+        swapChainSurfaceFormat           = chooseSurfaceFormat(availableFormats);
+        const auto availablePresentModes = physicalDevice.getSurfacePresentModesKHR(*surface);
+
+        vk::SwapchainCreateInfoKHR swapChainCI{
+            .surface          = surface,
+            .minImageCount    = minImageCount,
+            .imageFormat      = swapChainSurfaceFormat.format,
+            .imageColorSpace  = swapChainSurfaceFormat.colorSpace,
+            .imageExtent      = swapChainExtent,
+            .imageArrayLayers = 1, // Always 1 unless for stereoscopic 3D
+            // The image usage, for intermediate ops use ::eTransferDst
+            .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+            // Ownership must be exclusively transferred to other queue
+            // eConcurrent: Shared by multiple queue without exclusive ownership transfer
+            .imageSharingMode = vk::SharingMode::eExclusive,
+            // SupportTransforms from capabilities. To specify no transform provide currentTransform.
+            .preTransform = surfaceCapabilities.currentTransform,
+            // Whether to use alpha channel for blending with other windows, almost always false
+            .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+            .presentMode    = choosePresentationMode(availablePresentModes),
+            .clipped        = true, // Clip obscured pixels
+            // For swap chain recreation
+            .oldSwapchain = nullptr
+
+        };
+        swapChain       = vk::raii::SwapchainKHR(device, swapChainCI);
+        swapChainImages = swapChain.getImages();
+    }
+
+
+    vk::SurfaceFormatKHR TempestEngine::chooseSurfaceFormat(
+        const std::vector<vk::SurfaceFormatKHR>& surfaceFormats) const noexcept
+    {
+        assert(surfaceFormats.size() > 0);
+        // Find a suitable format with srgb colorspace, and return the first one if not supported
+        const auto formatIt = std::ranges::find_if(surfaceFormats, [](const auto& surfaceFormat) {
+            return surfaceFormat.format == vk::Format::eB8G8R8A8Srgb &&
+                surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+        });
+        return formatIt != surfaceFormats.end() ? *formatIt : surfaceFormats[0];
+    }
+
+    vk::PresentModeKHR TempestEngine::choosePresentationMode(
+        const std::vector<vk::PresentModeKHR>& presentModes) const noexcept
+    {
+        // Ensure that at least Fifo is supported
+        assert(std::ranges::any_of(presentModes, [](const auto& presentMode) {
+            return presentMode == vk::PresentModeKHR::eFifo;
+        }));
+        // If mailbox is supported choose that else use Fifo as fallback
+        return std::ranges::any_of(presentModes,
+                                   [](const auto& presentMode) {
+                                       return presentMode == vk::PresentModeKHR::eMailbox;
+                                   })
+            ? vk::PresentModeKHR::eMailbox
+            : vk::PresentModeKHR::eFifo;
+    }
+
+
+    vk::Extent2D TempestEngine::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept
+    {
+        // Choose the resolution of the swap chain
+        // If the current extend is not the max value for uint32_t(set by some window managers)
+        // then use the current extent, otherwise use the SDL buffer's width and height
+        // This is necessary since some displays can have a larger buffer like apple's retina display w * dpi
+        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+            return capabilities.currentExtent;
+
+        // We need to clamp the width and height with the valid ranges of vulkan surface
+        int width, height;
+        SDL_GetWindowSizeInPixels(window, &width, &height);
+        return vk::Extent2D{
+            .width = std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+            .height =
+                std::clamp<uint32_t>(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height),
+        };
+    }
+
+
+    uint32_t TempestEngine::chooseMinImageCount(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept
+    {
+        // Choose an appropriate image count in the range between minImageCount < n <= maxImageCount/3
+        auto minImageCount = std::max(3u, capabilities.minImageCount); // Choose between min and 3 images max
+        if (capabilities.maxImageCount > 0 && capabilities.maxImageCount < minImageCount)
+        {
+            minImageCount = capabilities.maxImageCount;
+        }
+        return minImageCount;
     }
 
 

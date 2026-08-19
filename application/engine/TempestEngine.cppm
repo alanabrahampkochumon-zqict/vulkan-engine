@@ -31,6 +31,13 @@ namespace engine
         void createSurface();
         void pickPhysicalDevice();
         void createLogicalDevice();
+        void createSwapChain();
+
+        vk::SurfaceFormatKHR chooseSurfaceFormat(
+            const std::vector<vk::SurfaceFormatKHR>& surfaceFormats) const noexcept;
+        vk::PresentModeKHR choosePresentationMode(const std::vector<vk::PresentModeKHR>& presentModes) const noexcept;
+        vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept;
+        uint32_t chooseMinImageCount(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept;
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -48,6 +55,10 @@ namespace engine
         vk::raii::Queue graphicsQueue{ nullptr };
         vk::PhysicalDeviceFeatures deviceFeatures{};
         vk::raii::SurfaceKHR surface{ nullptr };
+        vk::raii::SwapchainKHR swapChain{ nullptr };
+        std::vector<vk::Image> swapChainImages{};
+        vk::Extent2D swapChainExtent;
+        vk::SurfaceFormatKHR swapChainSurfaceFormat;
 
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };
