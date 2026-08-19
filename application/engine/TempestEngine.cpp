@@ -245,16 +245,23 @@ namespace engine
         /// and vulkan 1.1 shaderDrawparams, dynamic rendering and extended dynamic state
         /// Enable swap chain extension
         auto queueProperties = physicalDevice.getQueueFamilyProperties();
-        const auto graphicsQueueFamilyProperty =
-            std::ranges::find_if(queueProperties, [](const auto& qFamilyProperties) {
-                return (qFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) != static_cast<vk::QueueFlags>(0);
-            });
-        const auto graphicsIndex =
-            static_cast<uint32_t>(std::distance(queueProperties.begin(), graphicsQueueFamilyProperty));
+
+        uint32_t queueIndex = ~0; // 0b11111...1
+        // Iterate through each queue and find the first one that supports both graphics and presentation
+        for (uint32_t qFamilyIndex = 0; qFamilyIndex < queueProperties.size(); ++qFamilyIndex)
+        {
+            if (queueProperties[qFamilyIndex].queueFlags & vk::QueueFlagBits::eGraphics &&
+                physicalDevice.getSurfaceSupportKHR(qFamilyIndex, *surface))
+            {
+                queueIndex = qFamilyIndex;
+            }
+        }
+        if (queueIndex == ~0)
+            throw std::runtime_error("Couldn't find a queue supporting both graphics and presentation");
 
         // We need to specify a priority even if we have only 1 queue
         float queuePriority = 0.5f;
-        vk::DeviceQueueCreateInfo deviceQueueCreateInfo{ .queueFamilyIndex = graphicsIndex,
+        vk::DeviceQueueCreateInfo deviceQueueCreateInfo{ .queueFamilyIndex = queueIndex,
                                                          .queueCount       = 1,
                                                          .pQueuePriorities = &queuePriority };
 
@@ -281,7 +288,7 @@ namespace engine
         device = vk::raii::Device(physicalDevice, deviceCreateInfo);
 
         // Queue is automatically created with logical device
-        graphicsQueue = vk::raii::Queue(device, graphicsIndex, 0);
+        graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
     }
 
 
