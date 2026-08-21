@@ -71,6 +71,7 @@ namespace engine
         pickPhysicalDevice();
         createLogicalDevice();
         createSwapChain();
+        createImageViews();
     }
 
 
@@ -328,6 +329,31 @@ namespace engine
         };
         swapChain       = vk::raii::SwapchainKHR(device, swapChainCI);
         swapChainImages = swapChain.getImages();
+    }
+
+
+    void TempestEngine::createImageViews()
+    {
+        assert(swapChainImageViews.empty());
+        vk::ImageViewCreateInfo imageViewCreateInfo{
+            .viewType         = vk::ImageViewType::e2D,
+            .format           = swapChainSurfaceFormat.format,
+            .components       = { .r = vk::ComponentSwizzle::eIdentity,
+                                  .g = vk::ComponentSwizzle::eIdentity,
+                                  .b = vk::ComponentSwizzle::eIdentity,
+                                  .a = vk::ComponentSwizzle::eIdentity },
+            .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+                                  .baseMipLevel   = 0,
+                                  .levelCount     = 1,
+                                  .baseArrayLayer = 0,
+                                  .layerCount     = 1 },
+        };
+
+        for (const auto& image : swapChainImages)
+        {
+            imageViewCreateInfo.image = image;
+            swapChainImageViews.emplace_back(device, imageViewCreateInfo);
+        }
     }
 
 

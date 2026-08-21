@@ -32,6 +32,7 @@ namespace engine
         void pickPhysicalDevice();
         void createLogicalDevice();
         void createSwapChain();
+        void createImageViews();
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
             const std::vector<vk::SurfaceFormatKHR>& surfaceFormats) const noexcept;
@@ -57,6 +58,7 @@ namespace engine
         vk::raii::SurfaceKHR surface{ nullptr };
         vk::raii::SwapchainKHR swapChain{ nullptr };
         std::vector<vk::Image> swapChainImages{};
+        std::vector<vk::raii::ImageView> swapChainImageViews{};
         vk::Extent2D swapChainExtent;
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
 
