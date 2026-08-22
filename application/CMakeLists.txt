@@ -1,7 +1,6 @@
 add_executable(
         GameEngine
 
-        # src/OldVulkan.cpp
         Main.cpp
 )
 target_compile_features(GameEngine PUBLIC cxx_std_23)
@@ -10,7 +9,7 @@ target_sources(GameEngine PRIVATE
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
         FILES
-        src/FileReader.h
+        engine/FileReader.h
 )
 
 target_include_directories(GameEngine PRIVATE
