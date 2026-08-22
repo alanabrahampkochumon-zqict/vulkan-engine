@@ -22,13 +22,15 @@ add_subdirectory(engine)
 target_link_libraries(
         GameEngine
         PRIVATE
-         StrictWarnings
+        StrictWarnings
         SDL3::SDL3-static
-#        ${Vulkan_LIBRARIES}
+        #        ${Vulkan_LIBRARIES}
 
         TempestEngine
 )
 
+set(SHADER_SOURCES basic.slang)
+AddSlangShaderTarget(GameEngine SOURCES ${SHADER_SOURCES})
 
 add_custom_command(
         TARGET GameEngine
@@ -37,5 +39,5 @@ add_custom_command(
         copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders"
         "$<TARGET_FILE_DIR:GameEngine>/shaders"
-        COMMENT "Copying shaders to build directory"
+        COMMENT "Copying shaders to build directory..."
 )

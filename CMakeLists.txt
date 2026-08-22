@@ -100,6 +100,7 @@ if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif ()
 
 include(dependencies.cmake)
+include(cmake/SlangCompile.cmake)
 
 add_subdirectory(test-suite)
 add_subdirectory(application)
