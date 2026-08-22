@@ -14,6 +14,11 @@ target_sources(
         FILES
         TempestEngine.cppm
         GEWindow.cppm
+
+        PUBLIC
+        FILE_SET HEADERS
+        FILES
+        FileReader.h
 )
 
 

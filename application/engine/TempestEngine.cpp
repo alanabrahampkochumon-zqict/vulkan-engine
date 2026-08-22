@@ -9,6 +9,8 @@
  */
 
 module;
+#include "FileReader.h"
+
 #include <format>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
@@ -355,6 +357,32 @@ namespace engine
             swapChainImageViews.emplace_back(device, imageViewCreateInfo);
         }
     }
+
+
+    void TempestEngine::createGraphicsPipeline()
+    {
+        const auto shader = createShaderModule(readFile("shaders/slang.spv"));
+        /// Note: pSpecializationInfo can be used to specify shader constants.
+        const vk::PipelineShaderStageCreateInfo vertexShaderCreateInfo{ .stage  = vk::ShaderStageFlagBits::eVertex,
+                                                                        .module = shader,
+                                                                        .pName  = "vertMain" };
+        const vk::PipelineShaderStageCreateInfo fragmentShaderCreateInfo{ .stage  = vk::ShaderStageFlagBits::eFragment,
+                                                                          .module = shader,
+                                                                          .pName  = "fragMain" };
+
+        vk::PipelineShaderStageCreateInfo stages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
+    }
+
+
+    vk::raii::ShaderModule TempestEngine::createShaderModule(const std::vector<char>& code) const
+    {
+        vk::ShaderModuleCreateInfo shaderCreateInfo{
+            .codeSize = code.size(),
+            .pCode    = reinterpret_cast<uint32_t const*>(code.data()),
+        };
+        vk::raii::ShaderModule module{ device, shaderCreateInfo };
+        return module;
+    };
 
 
     vk::SurfaceFormatKHR TempestEngine::chooseSurfaceFormat(
