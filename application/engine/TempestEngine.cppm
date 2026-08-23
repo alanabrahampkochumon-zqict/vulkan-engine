@@ -33,7 +33,7 @@ namespace engine
         void createLogicalDevice();
         void createSwapChain();
         void createImageViews();
-        void createGraphicsPipeline();
+        void createGraphicsPipeline() const;
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(

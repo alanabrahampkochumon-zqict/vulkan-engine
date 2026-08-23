@@ -359,7 +359,7 @@ namespace engine
     }
 
 
-    void TempestEngine::createGraphicsPipeline()
+    void TempestEngine::createGraphicsPipeline() const
     {
         const auto shader = createShaderModule(readFile("shaders/slang.spv"));
         /// Note: pSpecializationInfo can be used to specify shader constants.
