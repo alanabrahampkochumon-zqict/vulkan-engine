@@ -33,7 +33,7 @@ namespace engine
         void createLogicalDevice();
         void createSwapChain();
         void createImageViews();
-        void createGraphicsPipeline() const;
+        void createGraphicsPipeline();
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -63,6 +63,8 @@ namespace engine
         std::vector<vk::raii::ImageView> swapChainImageViews{};
         vk::Extent2D swapChainExtent;
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
+        vk::raii::PipelineLayout pipelineLayout{ nullptr };
+        vk::raii::Pipeline graphicsPipeline{ nullptr };
 
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };

@@ -74,6 +74,7 @@ namespace engine
         createLogicalDevice();
         createSwapChain();
         createImageViews();
+        createGraphicsPipeline();
     }
 
 
@@ -359,7 +360,7 @@ namespace engine
     }
 
 
-    void TempestEngine::createGraphicsPipeline() const
+    void TempestEngine::createGraphicsPipeline()
     {
         const auto shader = createShaderModule(readFile("shaders/slang.spv"));
         /// Note: pSpecializationInfo can be used to specify shader constants.
@@ -370,7 +371,7 @@ namespace engine
                                                                           .module = shader,
                                                                           .pName  = "fragMain" };
 
-        vk::PipelineShaderStageCreateInfo stages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
+        vk::PipelineShaderStageCreateInfo shaderStages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
 
         /// States like viewport dimensions, line width, and blend constants can be changed
         /// without recreating the graphics pipeline at draw time, but we need to specify a dynamic state to do so.
@@ -390,7 +391,7 @@ namespace engine
         // primitiveRestartEnable: Breaks up lines and tris using special index of 0xffff, or 0xffffffff
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly{ .topology = vk::PrimitiveTopology::eTriangleList };
 
-        // Create a viewport with the swapchain dimensions
+        // Create a viewport with the swap chain dimensions
         // Viewport describe the transformation from the image(swap chain) to framebuffer
         vk::Viewport viewport{ .x        = 0.0f,
                                .y        = 0.0f,
@@ -447,7 +448,7 @@ namespace engine
         };
 
         // Global color blending vk::PipelineColorBlendStateCreateInfo
-        vk::PipelineColorBlendStateCreateInfo colorBlender{
+        vk::PipelineColorBlendStateCreateInfo colorBlending{
             .logicOpEnable   = vk::False, // Enabling this blending will turn off first blending
             .logicOp         = vk::LogicOp::eCopy,
             .attachmentCount = 1,
@@ -455,15 +456,41 @@ namespace engine
         };
 
         // Pipeline layout
-        vk::raii::PipelineLayout pipelineLayout = nullptr;
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ .setLayoutCount = 0, .pushConstantRangeCount = 0 };
         pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutInfo);
+
+        // Dynamic rendering
+        // Create the pipeline with graphics and rendering pipelines
+        vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {
+            { .stageCount          = 2,
+              .pStages             = shaderStages,
+              .pVertexInputState   = &vertexInputInfo,
+              .pInputAssemblyState = &inputAssembly,
+              .pViewportState      = &viewportState,
+              .pRasterizationState = &rasterizer,
+              .pMultisampleState   = &multisampling,
+              .pColorBlendState    = &colorBlending,
+              .pDynamicState       = &dynamicState,
+              .layout              = pipelineLayout,
+              .renderPass          = nullptr },
+
+            { .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChainSurfaceFormat.format }
+        };
+        // BasePipelineHandle and BasePipelineIndex -> used for inheriting pipelines
+
+        graphicsPipeline =
+            vk::raii::Pipeline(device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
+
+        if (graphicsPipeline == nullptr)
+        {
+            throw std::runtime_error("There was an error creating graphics pipeline");
+        }
     }
 
 
     vk::raii::ShaderModule TempestEngine::createShaderModule(const std::vector<char>& code) const
     {
-        vk::ShaderModuleCreateInfo shaderCreateInfo{
+        const vk::ShaderModuleCreateInfo shaderCreateInfo{
             .codeSize = code.size(),
             .pCode    = reinterpret_cast<uint32_t const*>(code.data()),
         };
