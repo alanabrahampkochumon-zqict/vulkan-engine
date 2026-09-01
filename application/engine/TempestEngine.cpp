@@ -299,15 +299,15 @@ namespace engine
 
     void TempestEngine::createSwapChain()
     {
-        vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(*surface);
-        swapChainExtent                                = chooseSwapExtent(surfaceCapabilities);
-        const uint32_t minImageCount                   = chooseMinImageCount(surfaceCapabilities);
+        const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(*surface);
+        swapChainExtent                                      = chooseSwapExtent(surfaceCapabilities);
+        const uint32_t minImageCount                         = chooseMinImageCount(surfaceCapabilities);
 
         const auto availableFormats      = physicalDevice.getSurfaceFormatsKHR(*surface);
         swapChainSurfaceFormat           = chooseSurfaceFormat(availableFormats);
         const auto availablePresentModes = physicalDevice.getSurfacePresentModesKHR(*surface);
 
-        vk::SwapchainCreateInfoKHR swapChainCI{
+        const vk::SwapchainCreateInfoKHR swapChainCI{
             .surface          = surface,
             .minImageCount    = minImageCount,
             .imageFormat      = swapChainSurfaceFormat.format,
@@ -371,6 +371,93 @@ namespace engine
                                                                           .pName  = "fragMain" };
 
         vk::PipelineShaderStageCreateInfo stages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
+
+        /// States like viewport dimensions, line width, and blend constants can be changed
+        /// without recreating the graphics pipeline at draw time, but we need to specify a dynamic state to do so.
+        /// By creating a dynamic state, teh configuration of these values will be ignored, requiring those to be
+        /// specified at draw time.
+        std::vector dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+        vk::PipelineDynamicStateCreateInfo dynamicState{ .dynamicStateCount =
+                                                             static_cast<uint32_t>(dynamicStates.size()),
+                                                         .pDynamicStates = dynamicStates.data() };
+
+        // Describes teh format of vertex data passed into vertex shader
+        // Binding: Describe the spacing between data and whether they are per vertex or per instance
+        // Attribute Description: Type of attributes passed to the vertex, with the binding and offset
+        vk::PipelineVertexInputStateCreateInfo vertexInputInfo{};
+
+        // Topology or primitive types(TriangleList, Fan, Line, Point etc.)
+        // primitiveRestartEnable: Breaks up lines and tris using special index of 0xffff, or 0xffffffff
+        vk::PipelineInputAssemblyStateCreateInfo inputAssembly{ .topology = vk::PrimitiveTopology::eTriangleList };
+
+        // Create a viewport with the swapchain dimensions
+        // Viewport describe the transformation from the image(swap chain) to framebuffer
+        vk::Viewport viewport{ .x        = 0.0f,
+                               .y        = 0.0f,
+                               .width    = static_cast<float>(swapChainExtent.width),
+                               .height   = static_cast<float>(swapChainExtent.height),
+                               .minDepth = 0.0f,
+                               .maxDepth = 1.0f };
+
+        // scissor defined the region of pixels to store(filtering)
+        vk::Rect2D scissor{ .offset = vk::Offset2D{ 0, 0 }, .extent = swapChainExtent };
+
+        vk::PipelineViewportStateCreateInfo viewportState{
+            .viewportCount = 1, .pViewports = &viewport, .scissorCount = 1, .pScissors = &scissor
+        };
+
+
+        // Rasterizer
+        vk::PipelineRasterizationStateCreateInfo rasterizer{
+            // If set to true, then fragments beyond far and near planes are clamped, and not discarded
+            // useful for shadow maps (requires GPU feature)
+            .depthClampEnable = vk::False,
+            // If set to true, not geometry pass through the rasterizer, disables all output to framebuffer
+            .rasterizerDiscardEnable = vk::False,
+            .polygonMode             = vk::PolygonMode::eFill,      // Fill vs Wireframe vs Dots
+            .cullMode                = vk::CullModeFlagBits::eBack, // Back face culling,
+            .frontFace               = vk::FrontFace::eClockwise,   // Winding direction
+            .depthBiasEnable         = vk::False, // Bias the depth value based on slope(useful for shadow maps)
+            .lineWidth               = 1.0f,      // Lines thicker than 1.0f require wideLines GPU feature
+        };
+
+        // Multisampling
+        // Disabled for now.
+        vk::PipelineMultisampleStateCreateInfo multisampling{ .rasterizationSamples = vk::SampleCountFlagBits::e1,
+                                                              .sampleShadingEnable  = vk::False };
+
+        // Depth and stencil tests
+        // Unused right now
+        // vk::PipelineDepthStencilStateCreateInfo depthStencilTests{};
+
+        // Color blending
+        // Color blending per attached framebuffer
+        // Alpha blending(alpha * c1 + (1 - alpha) * c1)
+        vk::PipelineColorBlendAttachmentState colorAttachmentState{
+            .blendEnable         = vk::False,
+            .srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
+            .dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
+            .colorBlendOp        = vk::BlendOp::eAdd,
+            .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+            .dstAlphaBlendFactor = vk::BlendFactor::eZero,
+            .alphaBlendOp        = vk::BlendOp::eAdd,
+            // Determines which components will be affected
+            .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+                vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
+        };
+
+        // Global color blending vk::PipelineColorBlendStateCreateInfo
+        vk::PipelineColorBlendStateCreateInfo colorBlender{
+            .logicOpEnable   = vk::False, // Enabling this blending will turn off first blending
+            .logicOp         = vk::LogicOp::eCopy,
+            .attachmentCount = 1,
+            .pAttachments    = &colorAttachmentState
+        };
+
+        // Pipeline layout
+        vk::raii::PipelineLayout pipelineLayout = nullptr;
+        vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ .setLayoutCount = 0, .pushConstantRangeCount = 0 };
+        pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutInfo);
     }
 
 
