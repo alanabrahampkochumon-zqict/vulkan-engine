@@ -41,11 +41,17 @@ namespace engine
         vk::PresentModeKHR choosePresentationMode(const std::vector<vk::PresentModeKHR>& presentModes) const noexcept;
         vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept;
         uint32_t chooseMinImageCount(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept;
+        void createCommandPool() noexcept;
+        void createCommandBuffer() noexcept;
+        void recordCommandBuffer(uint32_t imageIndex) noexcept;
+        // Transition an image layout for rendering, submission etc.
+        void transitionImageLayout(uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
+                                   vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask,
+                                   vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask) noexcept;
 
 
         std::string appName{}, appVersion{}, appId{};
         size_t width{}, height{};
-
 
         SDL_Window* window{ nullptr };
 
@@ -65,6 +71,9 @@ namespace engine
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
         vk::raii::PipelineLayout pipelineLayout{ nullptr };
         vk::raii::Pipeline graphicsPipeline{ nullptr };
+        vk::raii::CommandPool commandPool{ nullptr };
+        vk::raii::CommandBuffer commandBuffer{ nullptr };
+        uint32_t queueIndex = ~0; // 0b11111...1
 
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };

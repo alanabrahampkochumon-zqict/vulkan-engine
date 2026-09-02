@@ -75,6 +75,7 @@ namespace engine
         createSwapChain();
         createImageViews();
         createGraphicsPipeline();
+        createCommandPool();
     }
 
 
@@ -251,7 +252,6 @@ namespace engine
         /// Enable swap chain extension
         auto queueProperties = physicalDevice.getQueueFamilyProperties();
 
-        uint32_t queueIndex = ~0; // 0b11111...1
         // Iterate through each queue and find the first one that supports both graphics and presentation
         for (uint32_t qFamilyIndex = 0; qFamilyIndex < queueProperties.size(); ++qFamilyIndex)
         {
@@ -499,6 +499,51 @@ namespace engine
     };
 
 
+    void TempestEngine::handleEvents()
+    {
+        SDL_Event event;
+
+        while (SDL_PollEvent(&event))
+        {
+            switch (event.type)
+            {
+                case SDL_EVENT_QUIT:
+                    _isRunning = false;
+                    break;
+                default:
+                    break;
+                    // SDL_Log("Unhandled event!");
+            }
+        }
+    }
+
+    std::vector<const char*> TempestEngine::getRequiredExtensions() noexcept
+    {
+        uint32_t extensionCount  = 0;
+        const auto sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+        std::vector extensions(sdlExtensions, sdlExtensions + extensionCount);
+        // Setup up the debug callback extension
+        if (enableValidationLayers)
+            extensions.push_back(vk::EXTDebugUtilsExtensionName);
+        return extensions;
+    }
+
+
+    VKAPI_ATTR vk::Bool32 VKAPI_CALL TempestEngine::debugCallback(
+        const vk::DebugUtilsMessageSeverityFlagBitsEXT severity, const vk::DebugUtilsMessageTypeFlagsEXT type,
+        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, [[maybe_unused]] void* pUserData)
+    {
+        if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+        {
+            SDL_Log(
+                "%s",
+                std::format("Validation Layer(type: {})\nMessage:\n{}\n", vk::to_string(type), pCallbackData->pMessage)
+                    .c_str());
+        }
+        return vk::False;
+    }
+
+
     vk::SurfaceFormatKHR TempestEngine::chooseSurfaceFormat(
         const std::vector<vk::SurfaceFormatKHR>& surfaceFormats) const noexcept
     {
@@ -510,6 +555,7 @@ namespace engine
         });
         return formatIt != surfaceFormats.end() ? *formatIt : surfaceFormats[0];
     }
+
 
     vk::PresentModeKHR TempestEngine::choosePresentationMode(
         const std::vector<vk::PresentModeKHR>& presentModes) const noexcept
@@ -560,48 +606,120 @@ namespace engine
     }
 
 
-    std::vector<const char*> TempestEngine::getRequiredExtensions() noexcept
+    void TempestEngine::createCommandPool() noexcept
     {
-        uint32_t extensionCount  = 0;
-        const auto sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
-        std::vector extensions(sdlExtensions, sdlExtensions + extensionCount);
-        // Setup up the debug callback extension
-        if (enableValidationLayers)
-            extensions.push_back(vk::EXTDebugUtilsExtensionName);
-        return extensions;
+        // For allocation command buffer we need a command pool first
+        const vk::CommandPoolCreateInfo commandPoolCreateInfo{
+            // Allow individual re-recording
+            // Transient-> Allows command buffers to be rerecorded with new commands often.
+            .flags            = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+            .queueFamilyIndex = queueIndex
+        };
+
+        // Command buffers execute by submitting them to ONE of the device queues, like graphics or presentation,
+        // and each queue type require a different command buffer
+        commandPool = vk::raii::CommandPool(device, commandPoolCreateInfo);
     }
 
 
-    VKAPI_ATTR vk::Bool32 VKAPI_CALL TempestEngine::debugCallback(
-        const vk::DebugUtilsMessageSeverityFlagBitsEXT severity, const vk::DebugUtilsMessageTypeFlagsEXT type,
-        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+    void TempestEngine::createCommandBuffer() noexcept
     {
-        if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
-        {
-            SDL_Log(
-                "%s",
-                std::format("Validation Layer(type: {})\nMessage:\n{}\n", vk::to_string(type), pCallbackData->pMessage)
-                    .c_str());
-        }
-        return vk::False;
+        const vk::CommandBufferAllocateInfo commandBufferInfo{
+            .commandPool = commandPool,
+            // Can be submitted to a queue for execution, but cannot be called from other Command Buffers
+            // Secondary-> Cannot be submitted, but can be called from Primary Command Buffers
+            .level = vk::CommandBufferLevel::ePrimary,
+
+            .commandBufferCount = 1
+        };
+
+        // 1. Allocates a std::vector of buffers
+        // 2. Copy ctor is deleted
+        commandBuffer = std::move(vk::raii::CommandBuffers(device, commandBufferInfo).front());
     }
 
 
-    void TempestEngine::handleEvents()
+    void TempestEngine::recordCommandBuffer(const uint32_t imageIndex) noexcept
     {
-        SDL_Event event;
+        // Begin the command recording
+        const vk::CommandBufferBeginInfo beginInfo{};
+        commandBuffer.begin(beginInfo);
 
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
-                case SDL_EVENT_QUIT:
-                    _isRunning = false;
-                    break;
-                default:
-                    break;
-                    // SDL_Log("Unhandled event!");
-            }
-        }
+        // Transition swap chain image to ImageLayout::eColorAttachmentOptimal
+        transitionImageLayout(imageIndex, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+                              {}, // no need to wait for previous operation
+                              vk::AccessFlagBits2::eColorAttachmentWrite,
+                              vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                              vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+
+        const vk::ClearColorValue clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+
+        // Dynamic rendering doesn't require a RenderPass but we need to specify the attachment info
+        vk::RenderingAttachmentInfo attachmentInfo{
+            .imageView   = swapChainImageViews[imageIndex],
+            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp      = vk::AttachmentLoadOp::eClear,  // What to do to the attachment before rendering
+            .storeOp     = vk::AttachmentStoreOp::eStore, // What to do to the attachment after rendering
+            .clearValue  = clearColor
+        };
+
+        // Create the rendering info
+        const vk::RenderingInfo renderingInfo{ .renderArea           = { .offset = { .x = 0, .y = 0 },
+                                                                         .extent = swapChainExtent },
+                                               .layerCount           = 1,
+                                               .colorAttachmentCount = 1,
+                                               .pColorAttachments    = &attachmentInfo };
+
+        // Begin Rendering
+        commandBuffer.beginRendering(renderingInfo);
+        commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+        // Set dynamic states
+        commandBuffer.setViewport(0,
+                                  vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width),
+                                               static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
+        commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
+        // Draw
+        commandBuffer.draw(3, 1, 0, 0);
+        // End rendering
+        commandBuffer.endRendering();
+
+        // Transition image layout for presentation
+        transitionImageLayout(imageIndex, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR,
+                              vk::AccessFlagBits2::eColorAttachmentWrite, {},
+                              vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                              vk::PipelineStageFlagBits2::eBottomOfPipe);
+        commandBuffer.end();
+    }
+
+
+    void TempestEngine::transitionImageLayout(const uint32_t imageIndex, const vk::ImageLayout oldLayout,
+                                              const vk::ImageLayout newLayout, const vk::AccessFlags2 srcAccessMask,
+                                              const vk::AccessFlags2 dstAccessMask,
+                                              const vk::PipelineStageFlags2 srcStageMask,
+                                              const vk::PipelineStageFlags2 dstStageMask) noexcept
+    {
+        vk::ImageMemoryBarrier2 barrier = {
+            .srcStageMask        = srcStageMask,
+            .srcAccessMask       = srcAccessMask,
+            .dstStageMask        = dstStageMask,
+            .dstAccessMask       = dstAccessMask,
+            .oldLayout           = oldLayout,
+            .newLayout           = newLayout,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image               = swapChainImages[imageIndex],
+            // Since we transition render target, apply no mipmapping and the layer must be 1 unless for stereoscopic 3D
+            .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+                                  .baseMipLevel   = 0,
+                                  .levelCount     = 1,
+                                  .baseArrayLayer = 0,
+                                  .layerCount     = 1 }
+        };
+
+        const vk::DependencyInfo dependencyInfo = { .dependencyFlags         = {},
+                                                    .imageMemoryBarrierCount = 1,
+                                                    .pImageMemoryBarriers    = &barrier };
+
+        commandBuffer.pipelineBarrier2(dependencyInfo);
     }
 } // namespace engine
