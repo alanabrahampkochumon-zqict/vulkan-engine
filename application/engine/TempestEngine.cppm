@@ -22,6 +22,7 @@ namespace engine
     private:
         void handleEvents();
         void initVulkan();
+        void drawFrame();
         static std::vector<const char*> getRequiredExtensions() noexcept;
         static VKAPI_ATTR vk::Bool32 VKAPI_CALL
         debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT type,
@@ -43,6 +44,7 @@ namespace engine
         uint32_t chooseMinImageCount(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept;
         void createCommandPool() noexcept;
         void createCommandBuffer() noexcept;
+        void createSyncObjects() noexcept;
         void recordCommandBuffer(uint32_t imageIndex) noexcept;
         // Transition an image layout for rendering, submission etc.
         void transitionImageLayout(uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
@@ -73,6 +75,9 @@ namespace engine
         vk::raii::Pipeline graphicsPipeline{ nullptr };
         vk::raii::CommandPool commandPool{ nullptr };
         vk::raii::CommandBuffer commandBuffer{ nullptr };
+        vk::raii::Semaphore renderFinishedSemaphore{ nullptr }, presentFinishedSemaphore{ nullptr };
+        // Fence is required since we don't want to overwrite the currently rendering frame
+        vk::raii::Fence drawFence{ nullptr };
         uint32_t queueIndex = ~0; // 0b11111...1
 
         std::string ENGINE_NAME{ "Tempest" };

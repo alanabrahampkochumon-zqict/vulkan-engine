@@ -54,7 +54,9 @@ namespace engine
         while (_isRunning)
         {
             handleEvents();
+            drawFrame();
         }
+        device.waitIdle();
     }
 
 
@@ -76,6 +78,65 @@ namespace engine
         createImageViews();
         createGraphicsPipeline();
         createCommandPool();
+        createCommandBuffer();
+        createSyncObjects();
+    }
+
+
+    void TempestEngine::drawFrame()
+    {
+        // Wait for previous frame to finish
+        // Wait for all the fences to be signalled
+        if (const auto fenceResult = device.waitForFences(*drawFence, vk::True, UINT64_MAX);
+            fenceResult != vk::Result::eSuccess)
+        {
+            throw std::runtime_error("Failed to wait for fence");
+        }
+        device.resetFences(*drawFence); // Fence needs to be manually reset
+
+        // Acquire image from swap chain
+        auto [result, imageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentFinishedSemaphore, nullptr);
+
+        // Record a command buffer
+        recordCommandBuffer(imageIndex);
+
+        // Submit the recorded command buffer
+        vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+        const vk::SubmitInfo submitInfo{ .waitSemaphoreCount   = 1,
+                                         .pWaitSemaphores      = &*presentFinishedSemaphore,
+                                         .pWaitDstStageMask    = &waitDestinationStageMask,
+                                         .commandBufferCount   = 1,
+                                         .pCommandBuffers      = &*commandBuffer,
+                                         .signalSemaphoreCount = 1,
+                                         .pSignalSemaphores    = &*renderFinishedSemaphore };
+        graphicsQueue.submit(submitInfo, *drawFence);
+
+        // Subpass dependencies
+        // DstSubpass must always be greater than srcSubpass
+        // (OPTIONAL CODE)
+        // vk::SubpassDependency dependency{ .srcSubpass    = vk::SubpassExternal, // Implicit subpass
+        //                                   .dstSubpass    = 0,                   // 0 -> refers to our subpass
+        //                                   .srcStageMask  = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+        //                                   .dstStageMask  = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+        //                                   .srcAccessMask = vk::AccessFlagBits::eNone,
+        //                                   .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite };
+        // vk::RenderPassCreateInfo renderPassInfo{ .dependencyCount = 1, .pDependencies = &dependency };
+
+        // Present the swap chain
+        const vk::PresentInfoKHR presentInfoKHR{
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores    = &*renderFinishedSemaphore,
+            .swapchainCount     = 1,
+            .pSwapchains        = &*swapChain, // Swap chain to present the image to
+            .pImageIndices      = &imageIndex, // The image index
+            .pResults           = nullptr,     // Allows you to check whether the swapchain presentation was successful
+        };
+
+        const auto presentResult = graphicsQueue.presentKHR(presentInfoKHR);
+        if (presentResult != vk::Result::eSuccess)
+        {
+            throw std::runtime_error("There was an error presenting the image.");
+        }
     }
 
 
@@ -220,6 +281,7 @@ namespace engine
                                                      vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
             const auto requiredFeatures = devFeatures.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
                 devFeatures.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+                devFeatures.get<vk::PhysicalDeviceVulkan13Features>().synchronization2 &&
                 devFeatures.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
             if (!requiredFeatures)
                 continue;
@@ -230,7 +292,7 @@ namespace engine
                 score += 1000;
 
 
-            // Sort by highest supported texture dimenension
+            // Sort by highest supported texture dimension
             score += properties.limits.maxImageDimension3D;
 
             gpus.insert(std::make_pair(score, pd));
@@ -277,10 +339,10 @@ namespace engine
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
                            vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
             featureChain = {
-                {},                               // Vulkan 1.0 features
-                { .shaderDrawParameters = true }, // Vulkan 1.1 features
-                { .dynamicRendering = true },     // Vulkan 1.3 features
-                { .extendedDynamicState = true }  // Dynamic state
+                {},                                                     // Vulkan 1.0 features
+                { .shaderDrawParameters = true },                       // Vulkan 1.1 features
+                { .synchronization2 = true, .dynamicRendering = true }, // Vulkan 1.3 features
+                { .extendedDynamicState = true }                        // Dynamic state
             };
 
         std::vector requiredDeviceExtensions{ vk::KHRSwapchainExtensionName };
@@ -639,11 +701,19 @@ namespace engine
     }
 
 
+    void TempestEngine::createSyncObjects() noexcept
+    {
+        renderFinishedSemaphore  = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo{});
+        presentFinishedSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo{});
+        drawFence                = vk::raii::Fence(device, { .flags = vk::FenceCreateFlagBits::eSignaled });
+    }
+
+
     void TempestEngine::recordCommandBuffer(const uint32_t imageIndex) noexcept
     {
         // Begin the command recording
-        const vk::CommandBufferBeginInfo beginInfo{};
-        commandBuffer.begin(beginInfo);
+        // const vk::CommandBufferBeginInfo beginInfo{};
+        commandBuffer.begin({});
 
         // Transition swap chain image to ImageLayout::eColorAttachmentOptimal
         transitionImageLayout(imageIndex, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
