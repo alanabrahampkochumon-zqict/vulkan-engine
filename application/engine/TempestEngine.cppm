@@ -57,6 +57,8 @@ namespace engine
 
         SDL_Window* window{ nullptr };
 
+        static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
+
         vk::raii::Context context{};
         vk::raii::Instance instance{ nullptr };
         std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
@@ -74,14 +76,16 @@ namespace engine
         vk::raii::PipelineLayout pipelineLayout{ nullptr };
         vk::raii::Pipeline graphicsPipeline{ nullptr };
         vk::raii::CommandPool commandPool{ nullptr };
-        vk::raii::CommandBuffer commandBuffer{ nullptr };
-        vk::raii::Semaphore renderFinishedSemaphore{ nullptr }, presentFinishedSemaphore{ nullptr };
+        std::vector<vk::raii::CommandBuffer> commandBuffers{};
+        std::vector<vk::raii::Semaphore> renderFinishedSemaphores{}, presentFinishedSemaphores{};
         // Fence is required since we don't want to overwrite the currently rendering frame
-        vk::raii::Fence drawFence{ nullptr };
+        std::vector<vk::raii::Fence> drawFences{};
+        uint32_t frameIndex = 1;
         uint32_t queueIndex = ~0; // 0b11111...1
 
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };
+
 
 
 #ifdef NDEBUG

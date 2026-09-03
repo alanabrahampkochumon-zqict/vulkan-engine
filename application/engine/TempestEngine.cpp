@@ -87,15 +87,17 @@ namespace engine
     {
         // Wait for previous frame to finish
         // Wait for all the fences to be signalled
-        if (const auto fenceResult = device.waitForFences(*drawFence, vk::True, UINT64_MAX);
+        if (const auto fenceResult = device.waitForFences(*drawFences[frameIndex], vk::True, UINT64_MAX);
             fenceResult != vk::Result::eSuccess)
         {
             throw std::runtime_error("Failed to wait for fence");
         }
-        device.resetFences(*drawFence); // Fence needs to be manually reset
+        device.resetFences(*drawFences[frameIndex]); // Fence needs to be manually reset
 
         // Acquire image from swap chain
-        auto [result, imageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentFinishedSemaphore, nullptr);
+        auto [result, imageIndex] =
+            swapChain.acquireNextImage(UINT64_MAX, *presentFinishedSemaphores[frameIndex], nullptr);
+        commandBuffers[frameIndex].reset();
 
         // Record a command buffer
         recordCommandBuffer(imageIndex);
@@ -103,13 +105,13 @@ namespace engine
         // Submit the recorded command buffer
         vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
         const vk::SubmitInfo submitInfo{ .waitSemaphoreCount   = 1,
-                                         .pWaitSemaphores      = &*presentFinishedSemaphore,
+                                         .pWaitSemaphores      = &*presentFinishedSemaphores[frameIndex],
                                          .pWaitDstStageMask    = &waitDestinationStageMask,
                                          .commandBufferCount   = 1,
-                                         .pCommandBuffers      = &*commandBuffer,
+                                         .pCommandBuffers      = &*commandBuffers[frameIndex],
                                          .signalSemaphoreCount = 1,
-                                         .pSignalSemaphores    = &*renderFinishedSemaphore };
-        graphicsQueue.submit(submitInfo, *drawFence);
+                                         .pSignalSemaphores    = &*renderFinishedSemaphores[frameIndex] };
+        graphicsQueue.submit(submitInfo, *drawFences[frameIndex]);
 
         // Subpass dependencies
         // DstSubpass must always be greater than srcSubpass
@@ -125,7 +127,7 @@ namespace engine
         // Present the swap chain
         const vk::PresentInfoKHR presentInfoKHR{
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores    = &*renderFinishedSemaphore,
+            .pWaitSemaphores    = &*renderFinishedSemaphores[frameIndex],
             .swapchainCount     = 1,
             .pSwapchains        = &*swapChain, // Swap chain to present the image to
             .pImageIndices      = &imageIndex, // The image index
@@ -137,6 +139,8 @@ namespace engine
         {
             throw std::runtime_error("There was an error presenting the image.");
         }
+
+        frameIndex = (frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
 
@@ -692,20 +696,27 @@ namespace engine
             // Secondary-> Cannot be submitted, but can be called from Primary Command Buffers
             .level = vk::CommandBufferLevel::ePrimary,
 
-            .commandBufferCount = 1
+            .commandBufferCount = MAX_FRAMES_IN_FLIGHT
         };
 
         // 1. Allocates a std::vector of buffers
         // 2. Copy ctor is deleted
-        commandBuffer = std::move(vk::raii::CommandBuffers(device, commandBufferInfo).front());
+        commandBuffers = std::move(vk::raii::CommandBuffers(device, commandBufferInfo));
     }
 
 
     void TempestEngine::createSyncObjects() noexcept
     {
-        renderFinishedSemaphore  = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo{});
-        presentFinishedSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo{});
-        drawFence                = vk::raii::Fence(device, { .flags = vk::FenceCreateFlagBits::eSignaled });
+        assert(presentFinishedSemaphores.empty() && renderFinishedSemaphores.empty() && drawFences.empty());
+        for (size_t i = 0; i < swapChainImages.size(); ++i)
+        {
+            renderFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+        }
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            presentFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+            drawFences.emplace_back(device, vk::FenceCreateInfo{ .flags = vk::FenceCreateFlagBits::eSignaled });
+        }
     }
 
 
@@ -713,7 +724,7 @@ namespace engine
     {
         // Begin the command recording
         // const vk::CommandBufferBeginInfo beginInfo{};
-        commandBuffer.begin({});
+        commandBuffers[frameIndex].begin({});
 
         // Transition swap chain image to ImageLayout::eColorAttachmentOptimal
         transitionImageLayout(imageIndex, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
@@ -741,24 +752,24 @@ namespace engine
                                                .pColorAttachments    = &attachmentInfo };
 
         // Begin Rendering
-        commandBuffer.beginRendering(renderingInfo);
-        commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+        commandBuffers[frameIndex].beginRendering(renderingInfo);
+        commandBuffers[frameIndex].bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
         // Set dynamic states
-        commandBuffer.setViewport(0,
-                                  vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width),
-                                               static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
-        commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
+        commandBuffers[frameIndex].setViewport(0,
+                                               vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width),
+                                                            static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
+        commandBuffers[frameIndex].setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
         // Draw
-        commandBuffer.draw(3, 1, 0, 0);
+        commandBuffers[frameIndex].draw(3, 1, 0, 0);
         // End rendering
-        commandBuffer.endRendering();
+        commandBuffers[frameIndex].endRendering();
 
         // Transition image layout for presentation
         transitionImageLayout(imageIndex, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR,
                               vk::AccessFlagBits2::eColorAttachmentWrite, {},
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                               vk::PipelineStageFlagBits2::eBottomOfPipe);
-        commandBuffer.end();
+        commandBuffers[frameIndex].end();
     }
 
 
@@ -790,6 +801,6 @@ namespace engine
                                                     .imageMemoryBarrierCount = 1,
                                                     .pImageMemoryBarriers    = &barrier };
 
-        commandBuffer.pipelineBarrier2(dependencyInfo);
+        commandBuffers[frameIndex].pipelineBarrier2(dependencyInfo);
     }
 } // namespace engine
