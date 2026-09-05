@@ -7,8 +7,9 @@ module;
 #include <vulkan/vulkan_raii.hpp>
 
 export module TempestEngine;
+export import :Vertex;
 
-namespace engine
+namespace tempest
 {
     export class TempestEngine
     {
@@ -86,6 +87,11 @@ namespace engine
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };
 
+        /// VERTICES
+        const std::vector<Vertex> vertices = { { { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+                                               { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
+                                               { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } } };
+
 
 
 #ifdef NDEBUG
@@ -95,4 +101,4 @@ namespace engine
 #endif
     };
 
-} // namespace engine
+} // namespace tempest

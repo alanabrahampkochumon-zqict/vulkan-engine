@@ -14,6 +14,7 @@ target_sources(
         FILES
         TempestEngine.cppm
         GEWindow.cppm
+        Vertex.cppm
 
         PUBLIC
         FILE_SET HEADERS

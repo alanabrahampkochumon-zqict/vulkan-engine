@@ -24,7 +24,7 @@ module;
 module TempestEngine;
 
 
-namespace engine
+namespace tempest
 {
     void TempestEngine::init(const std::string& applicationName, const std::string& version, const std::string& id,
                              const size_t width, const size_t height)
@@ -451,7 +451,14 @@ namespace engine
         // Describes teh format of vertex data passed into vertex shader
         // Binding: Describe the spacing between data and whether they are per vertex or per instance
         // Attribute Description: Type of attributes passed to the vertex, with the binding and offset
-        vk::PipelineVertexInputStateCreateInfo vertexInputInfo{};
+        auto bindingDescription   = Vertex::getBindingDescription();
+        auto attributeDescription = Vertex::getAttributeDescription();
+        vk::PipelineVertexInputStateCreateInfo vertexInputInfo{
+            .vertexBindingDescriptionCount   = static_cast<uint32_t>(1),
+            .pVertexBindingDescriptions      = &bindingDescription,
+            .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size()),
+            .pVertexAttributeDescriptions    = attributeDescription.data()
+        };
 
         // Topology or primitive types(TriangleList, Fan, Line, Point etc.)
         // primitiveRestartEnable: Breaks up lines and tris using special index of 0xffff, or 0xffffffff
@@ -803,4 +810,4 @@ namespace engine
 
         commandBuffers[frameIndex].pipelineBarrier2(dependencyInfo);
     }
-} // namespace engine
+} // namespace tempest

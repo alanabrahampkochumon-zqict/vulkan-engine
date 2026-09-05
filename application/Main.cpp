@@ -11,7 +11,7 @@ int main()
     const std::string appId      = "com.tempest.engine";
 
     try{
-        engine::TempestEngine vulkanEngine{};
+        tempest::TempestEngine vulkanEngine{};
         vulkanEngine.init(appName, appVersion, appId, 1280, 720);
         vulkanEngine.run();
         vulkanEngine.cleanup();
