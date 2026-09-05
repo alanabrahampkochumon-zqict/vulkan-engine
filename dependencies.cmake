@@ -24,6 +24,14 @@ FetchContent_Declare(
         SYSTEM
 )
 
+# TODO: Replace glm with our falcon math library
+FetchContent_Declare(
+        glm
+        GIT_REPOSITORY https://github.com/icaven/glm.git
+        GIT_TAG dca38025fba63bb9284023e6de55f756b9e37cec
+        SYSTEM
+)
+
 # https://stackoverflow.com/questions/69144529/vulkan-hpp-with-cmake
 # Declare required Vulkan version
 set(VULKAN_VER_MAJOR 1)
@@ -66,6 +74,7 @@ set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE) # Disables google benchmar
 FetchContent_MakeAvailable(googletest)
 FetchContent_MakeAvailable(googlebenchmark)
 FetchContent_MakeAvailable(sdl3)
+FetchContent_MakeAvailable(glm)
 
 # Group the projects into a single folder
 set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER "Google Test")

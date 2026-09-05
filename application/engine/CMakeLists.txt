@@ -28,4 +28,5 @@ target_link_libraries(
         # StrictWarnings
         SDL3::SDL3-static
         Vulkan::Headers
+        glm::glm # TODO: Replace with Falcon
 )
