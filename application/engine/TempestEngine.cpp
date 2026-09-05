@@ -11,6 +11,7 @@
 module;
 #include "FileReader.h"
 
+#include <cstring>
 #include <format>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
@@ -78,6 +79,7 @@ namespace tempest
         createImageViews();
         createGraphicsPipeline();
         createCommandPool();
+        createVertexBuffer();
         createCommandBuffer();
         createSyncObjects();
     }
@@ -561,6 +563,46 @@ namespace tempest
     }
 
 
+    void TempestEngine::createVertexBuffer()
+    {
+        const vk::BufferCreateInfo bufferInfo{
+            .size        = sizeof(vertices[0]) * vertices.size(),
+            .usage       = vk::BufferUsageFlagBits::eVertexBuffer,
+            .sharingMode = vk::SharingMode::eExclusive // Ownership of buffer; only used within graphics queue
+        };
+        // This only creates buffer object, but we need to allocate and assign
+        // memory to it
+        vertexBuffer = vk::raii::Buffer(device, bufferInfo);
+
+        // Query the memory requirements of vertex buffer
+        const vk::MemoryRequirements memoryRequirements = vertexBuffer.getMemoryRequirements();
+
+
+        const vk::MemoryAllocateInfo memoryAllocateInfo{
+            .allocationSize = memoryRequirements.size,
+            .memoryTypeIndex =
+                findMemoryType(memoryRequirements.memoryTypeBits,
+                               vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)
+        };
+
+        vertexBufferMemory = vk::raii::DeviceMemory(device, memoryAllocateInfo);
+
+        // Bind the memory to vertex buffer.
+        // Offset must be aligned to memoryRequirements.alignment if non-zero
+        vertexBuffer.bindMemory(*vertexBufferMemory, 0);
+
+        // Copy the vertices to buffer
+        // Map buffer memory to CPU accessible memory
+        // But the driver may not copy the memory immediately due to caching
+        // SOL 1: use vk::MemoryPropertyFlagBits::eHostCoherent(Used here)
+        // SOL 2: use vk::raii::Device::flushMappedMemoryRanges after writing to mapped memory
+        //        vk::raii::Device::invalidateMappedMemoryRanges before reading from mapped memory
+        void* data = vertexBufferMemory.mapMemory(0, bufferInfo.size);
+        std::memcpy(data, vertices.data(), bufferInfo.size);
+        vertexBufferMemory.unmapMemory();
+    }
+
+
     vk::raii::ShaderModule TempestEngine::createShaderModule(const std::vector<char>& code) const
     {
         const vk::ShaderModuleCreateInfo shaderCreateInfo{
@@ -740,7 +782,7 @@ namespace tempest
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput);
 
-        const vk::ClearColorValue clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        constexpr vk::ClearColorValue clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 
         // Dynamic rendering doesn't require a RenderPass but we need to specify the attachment info
         vk::RenderingAttachmentInfo attachmentInfo{
@@ -761,13 +803,15 @@ namespace tempest
         // Begin Rendering
         commandBuffers[frameIndex].beginRendering(renderingInfo);
         commandBuffers[frameIndex].bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+        // Bind the vertex buffer
+        commandBuffers[frameIndex].bindVertexBuffers(0, *vertexBuffer, { 0 });
         // Set dynamic states
         commandBuffers[frameIndex].setViewport(0,
                                                vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width),
                                                             static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
         commandBuffers[frameIndex].setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
         // Draw
-        commandBuffers[frameIndex].draw(3, 1, 0, 0);
+        commandBuffers[frameIndex].draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
         // End rendering
         commandBuffers[frameIndex].endRendering();
 
@@ -809,5 +853,25 @@ namespace tempest
                                                     .pImageMemoryBarriers    = &barrier };
 
         commandBuffers[frameIndex].pipelineBarrier2(dependencyInfo);
+    }
+
+
+    uint32_t TempestEngine::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
+    {
+        // Graphics cards provide different memory types, so we need to query and choose one
+        // that best fits our requirements
+        const vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
+        // Has memoryTypes and memoryHeaps
+
+        // Return the index of memory type if it matches the properties we need.
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
+        {
+            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+            {
+                return i;
+            }
+        }
+
+        throw std::runtime_error("Failed to find a suitable memory type.");
     }
 } // namespace tempest

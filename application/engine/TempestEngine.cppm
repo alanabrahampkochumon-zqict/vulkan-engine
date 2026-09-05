@@ -36,6 +36,7 @@ namespace tempest
         void createSwapChain();
         void createImageViews();
         void createGraphicsPipeline();
+        void createVertexBuffer();
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -51,6 +52,8 @@ namespace tempest
         void transitionImageLayout(uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
                                    vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask,
                                    vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask) noexcept;
+
+        [[nodiscard]] uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -77,6 +80,8 @@ namespace tempest
         vk::raii::PipelineLayout pipelineLayout{ nullptr };
         vk::raii::Pipeline graphicsPipeline{ nullptr };
         vk::raii::CommandPool commandPool{ nullptr };
+        vk::raii::Buffer vertexBuffer{ nullptr };
+        vk::raii::DeviceMemory vertexBufferMemory{ nullptr };
         std::vector<vk::raii::CommandBuffer> commandBuffers{};
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores{}, presentFinishedSemaphores{};
         // Fence is required since we don't want to overwrite the currently rendering frame
