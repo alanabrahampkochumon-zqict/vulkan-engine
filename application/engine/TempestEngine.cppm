@@ -57,7 +57,7 @@ namespace engine
 
         SDL_Window* window{ nullptr };
 
-        static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
+        static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
         vk::raii::Context context{};
         vk::raii::Instance instance{ nullptr };

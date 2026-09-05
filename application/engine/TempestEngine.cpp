@@ -110,7 +110,7 @@ namespace engine
                                          .commandBufferCount   = 1,
                                          .pCommandBuffers      = &*commandBuffers[frameIndex],
                                          .signalSemaphoreCount = 1,
-                                         .pSignalSemaphores    = &*renderFinishedSemaphores[frameIndex] };
+                                         .pSignalSemaphores    = &*renderFinishedSemaphores[imageIndex] };
         graphicsQueue.submit(submitInfo, *drawFences[frameIndex]);
 
         // Subpass dependencies
@@ -127,7 +127,7 @@ namespace engine
         // Present the swap chain
         const vk::PresentInfoKHR presentInfoKHR{
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores    = &*renderFinishedSemaphores[frameIndex],
+            .pWaitSemaphores    = &*renderFinishedSemaphores[imageIndex],
             .swapchainCount     = 1,
             .pSwapchains        = &*swapChain, // Swap chain to present the image to
             .pImageIndices      = &imageIndex, // The image index
@@ -663,7 +663,7 @@ namespace engine
     uint32_t TempestEngine::chooseMinImageCount(const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept
     {
         // Choose an appropriate image count in the range between minImageCount < n <= maxImageCount/3
-        auto minImageCount = std::max(3u, capabilities.minImageCount); // Choose between min and 3 images max
+        auto minImageCount = std::max(3u, capabilities.minImageCount); // Choose between min and images max
         if (capabilities.maxImageCount > 0 && capabilities.maxImageCount < minImageCount)
         {
             minImageCount = capabilities.maxImageCount;
