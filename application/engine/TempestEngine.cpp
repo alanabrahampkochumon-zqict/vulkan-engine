@@ -565,41 +565,29 @@ namespace tempest
 
     void TempestEngine::createVertexBuffer()
     {
-        const vk::BufferCreateInfo bufferInfo{
-            .size        = sizeof(vertices[0]) * vertices.size(),
-            .usage       = vk::BufferUsageFlagBits::eVertexBuffer,
-            .sharingMode = vk::SharingMode::eExclusive // Ownership of buffer; only used within graphics queue
-        };
-        // This only creates buffer object, but we need to allocate and assign
-        // memory to it
-        vertexBuffer = vk::raii::Buffer(device, bufferInfo);
+        // Since the memory used by gpu for fast transfer are not host accessible we need
+        // to create a staging buffer(HOST_VISIBLE) and then transfer the data into the fast DeviceLocal Memory.
+        const vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-        // Query the memory requirements of vertex buffer
-        const vk::MemoryRequirements memoryRequirements = vertexBuffer.getMemoryRequirements();
-
-
-        const vk::MemoryAllocateInfo memoryAllocateInfo{
-            .allocationSize = memoryRequirements.size,
-            .memoryTypeIndex =
-                findMemoryType(memoryRequirements.memoryTypeBits,
-                               vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)
-        };
-
-        vertexBufferMemory = vk::raii::DeviceMemory(device, memoryAllocateInfo);
-
-        // Bind the memory to vertex buffer.
-        // Offset must be aligned to memoryRequirements.alignment if non-zero
-        vertexBuffer.bindMemory(*vertexBufferMemory, 0);
-
-        // Copy the vertices to buffer
-        // Map buffer memory to CPU accessible memory
-        // But the driver may not copy the memory immediately due to caching
+        //------------- STAGING BUFFER ------------------
+        // The driver may not copy the memory immediately due to caching.
         // SOL 1: use vk::MemoryPropertyFlagBits::eHostCoherent(Used here)
         // SOL 2: use vk::raii::Device::flushMappedMemoryRanges after writing to mapped memory
-        //        vk::raii::Device::invalidateMappedMemoryRanges before reading from mapped memory
-        void* data = vertexBufferMemory.mapMemory(0, bufferInfo.size);
-        std::memcpy(data, vertices.data(), bufferInfo.size);
-        vertexBufferMemory.unmapMemory();
+        //        vk::raii::Device::invalidateMappedMemoryRanges before reading from mapped memory.
+        auto [stagingBuffer, stagingBufferMemory] =
+            createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,
+                         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+        void* dataStaging = stagingBufferMemory.mapMemory(0, bufferSize);
+        memcpy(dataStaging, vertices.data(), bufferSize);
+        stagingBufferMemory.unmapMemory();
+
+
+        //------------- GPU BUFFER ------------------
+        std::tie(vertexBuffer, vertexBufferMemory) =
+            createBuffer(bufferSize, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+                         vk::MemoryPropertyFlagBits::eDeviceLocal);
+        copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
     }
 
 
@@ -853,6 +841,47 @@ namespace tempest
                                                     .pImageMemoryBarriers    = &barrier };
 
         commandBuffers[frameIndex].pipelineBarrier2(dependencyInfo);
+    }
+
+
+    std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> TempestEngine::createBuffer(
+        const vk::DeviceSize size, const vk::BufferUsageFlags usageFlags,
+        const vk::MemoryPropertyFlags properties) const noexcept
+    {
+        const vk::BufferCreateInfo bufferInfo{ .size        = size,
+                                               .usage       = usageFlags,
+                                               .sharingMode = vk::SharingMode::eExclusive };
+        auto buffer                                  = vk::raii::Buffer(device, bufferInfo);
+        const vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
+        const vk::MemoryAllocateInfo allocateInfo{ .allocationSize = memRequirements.size,
+                                                   .memoryTypeIndex =
+                                                       findMemoryType(memRequirements.memoryTypeBits, properties) };
+        auto devMemory = vk::raii::DeviceMemory(device, allocateInfo);
+        buffer.bindMemory(*devMemory, 0);
+        return { std::move(buffer), std::move(devMemory) };
+    }
+
+
+    void TempestEngine::copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer,
+                                   const vk::DeviceSize bufferSize) const noexcept
+    {
+        const vk::CommandBufferAllocateInfo bufferInfo{ .commandPool        = commandPool,
+                                                        .level              = vk::CommandBufferLevel::ePrimary,
+                                                        .commandBufferCount = 1 };
+        const vk::raii::CommandBuffer commandCopyBuffer = std::move(device.allocateCommandBuffers(bufferInfo).front());
+
+        // Recording of the command buffer will only be used once and will be reset
+        // and recorded again between submissions
+        commandCopyBuffer.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+        commandCopyBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy(0, 0, bufferSize));
+        commandCopyBuffer.end();
+
+        // Execute the buffer to complete the transfer
+        // Since there are not events waiting on the graphics queue unlike draw commands
+        // we can drop the fence and use waitIdle
+        graphicsQueue.submit(vk::SubmitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*commandCopyBuffer },
+                             nullptr);
+        graphicsQueue.waitIdle();
     }
 
 
