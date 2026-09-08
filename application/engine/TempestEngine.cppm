@@ -37,6 +37,7 @@ namespace tempest
         void createImageViews();
         void createGraphicsPipeline();
         void createVertexBuffer();
+        void createIndexBuffer();
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -52,8 +53,10 @@ namespace tempest
         void transitionImageLayout(uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
                                    vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask,
                                    vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask) noexcept;
-        std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usageFlags, vk::MemoryPropertyFlags properties) const noexcept;
-        void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize bufferSize) const noexcept;
+        std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer(
+            vk::DeviceSize size, vk::BufferUsageFlags usageFlags, vk::MemoryPropertyFlags properties) const noexcept;
+        void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer,
+                        vk::DeviceSize bufferSize) const noexcept;
 
         [[nodiscard]] uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 
@@ -82,8 +85,8 @@ namespace tempest
         vk::raii::PipelineLayout pipelineLayout{ nullptr };
         vk::raii::Pipeline graphicsPipeline{ nullptr };
         vk::raii::CommandPool commandPool{ nullptr };
-        vk::raii::Buffer vertexBuffer{ nullptr };
-        vk::raii::DeviceMemory vertexBufferMemory{ nullptr };
+        vk::raii::Buffer vertexBuffer{ nullptr }, indexBuffer{ nullptr };
+        vk::raii::DeviceMemory vertexBufferMemory{ nullptr }, indexBufferMemory{ nullptr };
         std::vector<vk::raii::CommandBuffer> commandBuffers{};
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores{}, presentFinishedSemaphores{};
         // Fence is required since we don't want to overwrite the currently rendering frame
@@ -95,12 +98,12 @@ namespace tempest
         bool _isRunning{ false };
 
         /// VERTICES
-        // const std::vector<Vertex> vertices = { { { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
-        //                                        { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
-        //                                        { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } } };
-        const std::vector<Vertex> vertices = { { .pos = { 0.0f, -0.5f }, .color = { 1.0f, 1.0f, 1.0f } },
-                                               { .pos = { 0.5f, 0.5f }, .color = { 0.0f, 1.0f, 0.0f } },
-                                               { .pos = { -0.5f, 0.5f }, .color = { 0.0f, 0.0f, 1.0f } } };
+        const std::vector<Vertex> vertices = { { .pos = { -0.5f, -0.5f }, .color = { 1.0f, 0.0f, 0.0f } },
+                                               { .pos = { 0.5f, -0.5f }, .color = { 0.0f, 1.0f, 0.0f } },
+                                               { .pos = { 0.5f, 0.5f }, .color = { 0.0f, 0.0f, 1.0f } },
+                                               { .pos = { -0.5f, 0.5f }, .color = { 1.0f, 1.0f, 1.0f } } };
+
+        const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0 };
 
 
 #ifdef NDEBUG

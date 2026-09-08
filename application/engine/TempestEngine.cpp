@@ -80,6 +80,7 @@ namespace tempest
         createGraphicsPipeline();
         createCommandPool();
         createVertexBuffer();
+        createIndexBuffer();
         createCommandBuffer();
         createSyncObjects();
     }
@@ -591,6 +592,24 @@ namespace tempest
     }
 
 
+    void TempestEngine::createIndexBuffer()
+    {
+        constexpr vk::DeviceSize bufferSize = sizeof(indices) * sizeof(indices[0]);
+        auto [stagingBuffer, stagingBufferMemory] =
+            createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,
+                         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+        void* data = stagingBufferMemory.mapMemory(0, bufferSize);
+        memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
+        stagingBufferMemory.unmapMemory();
+
+        std::tie(indexBuffer, indexBufferMemory) =
+            createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+    }
+
+
     vk::raii::ShaderModule TempestEngine::createShaderModule(const std::vector<char>& code) const
     {
         const vk::ShaderModuleCreateInfo shaderCreateInfo{
@@ -793,13 +812,14 @@ namespace tempest
         commandBuffers[frameIndex].bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
         // Bind the vertex buffer
         commandBuffers[frameIndex].bindVertexBuffers(0, *vertexBuffer, { 0 });
+        commandBuffers[frameIndex].bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
         // Set dynamic states
         commandBuffers[frameIndex].setViewport(0,
                                                vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width),
                                                             static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
         commandBuffers[frameIndex].setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
         // Draw
-        commandBuffers[frameIndex].draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+        commandBuffers[frameIndex].drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
         // End rendering
         commandBuffers[frameIndex].endRendering();
 
