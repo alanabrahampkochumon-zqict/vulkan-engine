@@ -16,6 +16,8 @@ module;
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 
+#include <chrono>
+#include <glm/gtc/matrix_transform.hpp>
 #include <map>
 #include <sdl3/SDL.h>
 #include <sdl3/SDL_vulkan.h>
@@ -81,6 +83,7 @@ namespace tempest
         createCommandPool();
         createVertexBuffer();
         createIndexBuffer();
+        createUniformBuffers();
         createCommandBuffer();
         createSyncObjects();
     }
@@ -107,6 +110,7 @@ namespace tempest
 
         // Submit the recorded command buffer
         vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+        updateUniformBuffer(frameIndex);
         const vk::SubmitInfo submitInfo{ .waitSemaphoreCount   = 1,
                                          .pWaitSemaphores      = &*presentFinishedSemaphores[frameIndex],
                                          .pWaitDstStageMask    = &waitDestinationStageMask,
@@ -429,6 +433,17 @@ namespace tempest
     }
 
 
+    void TempestEngine::createDescriptorSetLayout()
+    {
+        vk::DescriptorSetLayoutBinding uboLayoutBinding{ .binding         = 0,
+                                                         .descriptorType  = vk::DescriptorType::eUniformBuffer,
+                                                         .descriptorCount = 1,
+                                                         .stageFlags      = vk::ShaderStageFlagBits::eVertex };
+        const vk::DescriptorSetLayoutCreateInfo layoutInfo{ .bindingCount = 1, .pBindings = &uboLayoutBinding };
+        descriptorSetLayout = vk::raii::DescriptorSetLayout(device, layoutInfo);
+    }
+
+
     void TempestEngine::createGraphicsPipeline()
     {
         const auto shader = createShaderModule(readFile("shaders/slang.spv"));
@@ -532,7 +547,9 @@ namespace tempest
         };
 
         // Pipeline layout
-        vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ .setLayoutCount = 0, .pushConstantRangeCount = 0 };
+        vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ .setLayoutCount         = 1,
+                                                         .pSetLayouts            = &*descriptorSetLayout,
+                                                         .pushConstantRangeCount = 0 };
         pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutInfo);
 
         // Dynamic rendering
@@ -607,6 +624,22 @@ namespace tempest
             createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+    }
+
+
+    void TempestEngine::createUniformBuffers()
+    {
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            constexpr vk::DeviceSize size = sizeof(UniformBufferObject);
+            auto [buffer, bufferMemory] =
+                createBuffer(size, vk::BufferUsageFlagBits::eUniformBuffer,
+                             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            uniformBuffers.emplace_back(std::move(buffer));
+            uniformBuffersMemory.emplace_back(std::move(bufferMemory));
+            // Persistent mapping since we are updating buffer every frame, it is better to persistent mapping.
+            uniformBuffersMapped.emplace_back(uniformBuffersMemory.back().mapMemory(0, size));
+        }
     }
 
 
@@ -814,9 +847,10 @@ namespace tempest
         commandBuffers[frameIndex].bindVertexBuffers(0, *vertexBuffer, { 0 });
         commandBuffers[frameIndex].bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
         // Set dynamic states
+        // NOTE: The negative height is due to the fact the glm has an inverted y axis in the projection matrix.
         commandBuffers[frameIndex].setViewport(0,
                                                vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width),
-                                                            static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
+                                                            -static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
         commandBuffers[frameIndex].setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
         // Draw
         commandBuffers[frameIndex].drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
@@ -902,6 +936,22 @@ namespace tempest
         graphicsQueue.submit(vk::SubmitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*commandCopyBuffer },
                              nullptr);
         graphicsQueue.waitIdle();
+    }
+
+
+    void TempestEngine::updateUniformBuffer(uint32_t currentImageIdx) noexcept
+    {
+        static auto startTime  = std::chrono::high_resolution_clock::now();
+        const auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+        UniformBufferObject ubo{};
+        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.view  = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.proj  = glm::perspective(
+            glm::radians(45.0f), static_cast<float>(swapChainExtent.width) / static_cast<float>(swapChainExtent.height),
+            0.1f, 10.0f);
+        memcpy(uniformBuffersMapped[currentImageIdx], &ubo, sizeof(ubo));
     }
 
 

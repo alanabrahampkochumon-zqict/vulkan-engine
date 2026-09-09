@@ -36,9 +36,11 @@ namespace tempest
         void createLogicalDevice();
         void createSwapChain();
         void createImageViews();
+        void createDescriptorSetLayout();
         void createGraphicsPipeline();
         void createVertexBuffer();
         void createIndexBuffer();
+        void createUniformBuffers();
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -58,6 +60,7 @@ namespace tempest
             vk::DeviceSize size, vk::BufferUsageFlags usageFlags, vk::MemoryPropertyFlags properties) const noexcept;
         void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer,
                         vk::DeviceSize bufferSize) const noexcept;
+        void updateUniformBuffer(uint32_t currentImageIdx) noexcept;
 
         [[nodiscard]] uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 
@@ -83,11 +86,15 @@ namespace tempest
         std::vector<vk::raii::ImageView> swapChainImageViews{};
         vk::Extent2D swapChainExtent;
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
+        vk::raii::DescriptorSetLayout descriptorSetLayout{ nullptr };
         vk::raii::PipelineLayout pipelineLayout{ nullptr };
         vk::raii::Pipeline graphicsPipeline{ nullptr };
         vk::raii::CommandPool commandPool{ nullptr };
         vk::raii::Buffer vertexBuffer{ nullptr }, indexBuffer{ nullptr };
         vk::raii::DeviceMemory vertexBufferMemory{ nullptr }, indexBufferMemory{ nullptr };
+        std::vector<vk::raii::Buffer> uniformBuffers{};
+        std::vector<vk::raii::DeviceMemory> uniformBuffersMemory{};
+        std::vector<void*> uniformBuffersMapped{};
         std::vector<vk::raii::CommandBuffer> commandBuffers{};
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores{}, presentFinishedSemaphores{};
         // Fence is required since we don't want to overwrite the currently rendering frame
