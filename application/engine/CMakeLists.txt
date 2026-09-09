@@ -1,4 +1,5 @@
-add_library(TempestEngine OBJECT)
+add_library(TempestEngine OBJECT
+        )
 
 target_compile_features(TempestEngine PUBLIC cxx_std_23)
 
@@ -15,6 +16,7 @@ target_sources(
         TempestEngine.cppm
         GEWindow.cppm
         Vertex.cppm
+        UniformBufferObject.cppm
 
         PUBLIC
         FILE_SET HEADERS

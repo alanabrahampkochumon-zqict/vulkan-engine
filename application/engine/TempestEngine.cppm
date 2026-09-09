@@ -7,6 +7,7 @@ module;
 #include <vulkan/vulkan_raii.hpp>
 
 export module TempestEngine;
+export import :UBO;
 export import :Vertex;
 
 namespace tempest
