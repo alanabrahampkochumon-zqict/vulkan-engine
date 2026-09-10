@@ -699,7 +699,52 @@ namespace tempest
     }
 
 
-    void TempestEngine::createTextureImage() {}
+    void TempestEngine::createTextureImage()
+    {
+        // Read the image
+        int texWidth, texHeight, texChannels;
+        stbi_uc* pixels = stbi_load("textures/textures.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        vk::DeviceSize imageSize = texWidth * texHeight * 4;
+
+        if (!pixels)
+        {
+            throw std::runtime_error("Failed to load texture image");
+        }
+        constexpr auto properties =
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+        // Move the image to staging buffer
+        const auto& [stagingBuffer, stagingBufferMemory] =
+            createBuffer(imageSize, vk::BufferUsageFlagBits::eTransferSrc, properties);
+        void* data = stagingBufferMemory.mapMemory(0, imageSize);
+        memcpy(data, pixels, imageSize);
+        stagingBufferMemory.unmapMemory();
+
+        // Free the image buffer
+        stbi_image_free(pixels);
+
+        constexpr auto tiling = vk::ImageTiling::eOptimal; // Specifies how texels are arranged in memory
+        constexpr auto usage  = vk::ImageUsageFlagBits::eSampled;
+
+        vk::ImageCreateInfo imageInfo{ .imageType = vk::ImageType::e2D,
+                                       // Use the same format for texels as used for our pixels
+                                       .format      = swapChainSurfaceFormat.format,
+                                       .extent      = { .width = width, .height = height, .depth = 1 },
+                                       .mipLevels   = 1,
+                                       .arrayLayers = 1,
+                                       .samples     = vk::SampleCountFlagBits::e1, // Multisampling
+                                       .tiling      = tiling,
+                                       .usage       = usage,
+                                       .sharingMode = vk::SharingMode::eExclusive };
+        textureImage = vk::raii::Image(device, imageInfo);
+
+        const vk::MemoryRequirements memRequirements = textureImage.getMemoryRequirements();
+        vk::MemoryAllocateInfo allocateInfo{ .allocationSize = memRequirements.size,
+                                             .memoryTypeIndex =
+                                                 findMemoryType(memRequirements.memoryTypeBits, properties) };
+        textureImageMemory = vk::raii::DeviceMemory(device, allocateInfo);
+        textureImage.bindMemory(textureImageMemory, 0);
+    }
+
 
 
     vk::raii::ShaderModule TempestEngine::createShaderModule(const std::vector<char>& code) const

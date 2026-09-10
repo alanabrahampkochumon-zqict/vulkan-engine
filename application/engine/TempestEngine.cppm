@@ -102,6 +102,8 @@ namespace tempest
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores{}, presentFinishedSemaphores{};
         vk::raii::DescriptorPool descriptorPool{ nullptr };
         std::vector<vk::raii::DescriptorSet> descriptorSets{};
+        vk::raii::Image textureImage{ nullptr };
+        vk::raii::DeviceMemory textureImageMemory{ nullptr };
 
         // Fence is required since we don't want to overwrite the currently rendering frame
         std::vector<vk::raii::Fence> drawFences{};
