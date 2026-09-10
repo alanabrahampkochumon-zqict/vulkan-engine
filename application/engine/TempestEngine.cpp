@@ -23,6 +23,8 @@ module;
 #include <sdl3/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 module TempestEngine;
 
@@ -81,6 +83,7 @@ namespace tempest
         createImageViews();
         createCommandPool();
         createCommandBuffer();
+        createTextureImage();
         createVertexBuffer();
         createIndexBuffer();
         createUniformBuffers();
@@ -694,6 +697,9 @@ namespace tempest
             device.updateDescriptorSets(descriptorWrite, {});
         }
     }
+
+
+    void TempestEngine::createTextureImage() {}
 
 
     vk::raii::ShaderModule TempestEngine::createShaderModule(const std::vector<char>& code) const

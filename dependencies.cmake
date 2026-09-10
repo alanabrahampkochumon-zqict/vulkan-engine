@@ -64,6 +64,19 @@ FetchContent_Declare(
         GIT_SHALLOW TRUE
         GIT_PROGRESS TRUE
 )
+
+#------------------------------------------------------------------------
+# Fetch STB Headers
+#------------------------------------------------------------------------
+message(STATUS "Include STB Headers")
+FetchContent_Declare(
+        stb
+        GIT_REPOSITORY https://github.com/nothings/stb.git
+        GIT_TAG 2c980bb59875b0d32144a71867fbdebb2f77cd20
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+)
+
 # vulkanhpp does not have a proper CMakeLists
 # FetchContent_GetProperties(VulkanHPP)
 # FetchContent_Populate(VulkanHPP)
@@ -75,6 +88,14 @@ FetchContent_MakeAvailable(googletest)
 FetchContent_MakeAvailable(googlebenchmark)
 FetchContent_MakeAvailable(sdl3)
 FetchContent_MakeAvailable(glm)
+FetchContent_MakeAvailable(stb)
+
+add_library(stb INTERFACE
+        ${stb_SOURCE_DIR}/stb_image.h
+        # Add the sources for stb here as necessary
+)
+add_library(std::stb ALIAS stb)
+target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
 
 # Group the projects into a single folder
 set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER "Google Test")

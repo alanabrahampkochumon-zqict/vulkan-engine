@@ -32,4 +32,5 @@ target_link_libraries(
         SDL3::SDL3-static
         Vulkan::Headers
         glm::glm # TODO: Replace with Falcon
+        std::stb
 )

@@ -43,6 +43,7 @@ namespace tempest
         void createUniformBuffers();
         void createDescriptorPool();
         void createDescriptorSets();
+        void createTextureImage();
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(

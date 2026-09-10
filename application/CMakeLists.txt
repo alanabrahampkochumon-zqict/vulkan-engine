@@ -16,6 +16,7 @@ target_link_libraries(
         PRIVATE
         StrictWarnings
         SDL3::SDL3-static
+        std::stb
         #        ${Vulkan_LIBRARIES}
 
         TempestEngine
@@ -32,4 +33,14 @@ add_custom_command(
         "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders"
         "$<TARGET_FILE_DIR:GameEngine>/shaders"
         COMMENT "Copying shaders to build directory..."
+)
+
+add_custom_command(
+        TARGET GameEngine
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E
+        copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/res/textures"
+        "$<TARGET_FILE_DIR:GameEngine>/textures"
+        COMMENT "Copying textures to build directory..."
 )
