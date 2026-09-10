@@ -41,6 +41,8 @@ namespace tempest
         void createVertexBuffer();
         void createIndexBuffer();
         void createUniformBuffers();
+        void createDescriptorPool();
+        void createDescriptorSets();
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -97,6 +99,9 @@ namespace tempest
         std::vector<void*> uniformBuffersMapped{};
         std::vector<vk::raii::CommandBuffer> commandBuffers{};
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores{}, presentFinishedSemaphores{};
+        vk::raii::DescriptorPool descriptorPool{ nullptr };
+        std::vector<vk::raii::DescriptorSet> descriptorSets{};
+
         // Fence is required since we don't want to overwrite the currently rendering frame
         std::vector<vk::raii::Fence> drawFences{};
         uint32_t frameIndex = 1;

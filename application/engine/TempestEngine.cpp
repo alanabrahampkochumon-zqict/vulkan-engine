@@ -79,12 +79,15 @@ namespace tempest
         createLogicalDevice();
         createSwapChain();
         createImageViews();
-        createGraphicsPipeline();
         createCommandPool();
+        createCommandBuffer();
         createVertexBuffer();
         createIndexBuffer();
         createUniformBuffers();
-        createCommandBuffer();
+        createDescriptorSetLayout();
+        createDescriptorPool();
+        createDescriptorSets();
+        createGraphicsPipeline();
         createSyncObjects();
     }
 
@@ -492,7 +495,7 @@ namespace tempest
                                .maxDepth = 1.0f };
 
         // scissor defined the region of pixels to store(filtering)
-        vk::Rect2D scissor{ .offset = vk::Offset2D{ 0, 0 }, .extent = swapChainExtent };
+        vk::Rect2D scissor{ .offset = vk::Offset2D{ .x = 0, .y = 0 }, .extent = swapChainExtent };
 
         vk::PipelineViewportStateCreateInfo viewportState{
             .viewportCount = 1, .pViewports = &viewport, .scissorCount = 1, .pScissors = &scissor
@@ -508,9 +511,10 @@ namespace tempest
             .rasterizerDiscardEnable = vk::False,
             .polygonMode             = vk::PolygonMode::eFill,      // Fill vs Wireframe vs Dots
             .cullMode                = vk::CullModeFlagBits::eBack, // Back face culling,
-            .frontFace               = vk::FrontFace::eClockwise,   // Winding direction
-            .depthBiasEnable         = vk::False, // Bias the depth value based on slope(useful for shadow maps)
-            .lineWidth               = 1.0f,      // Lines thicker than 1.0f require wideLines GPU feature
+            // Winding direction (since we are using -y) to draw the triangles in the opposite direction
+            .frontFace       = vk::FrontFace::eCounterClockwise,
+            .depthBiasEnable = vk::False, // Bias the depth value based on slope(useful for shadow maps)
+            .lineWidth       = 1.0f,      // Lines thicker than 1.0f require wideLines GPU feature
         };
 
         // Multisampling
@@ -621,7 +625,8 @@ namespace tempest
         stagingBufferMemory.unmapMemory();
 
         std::tie(indexBuffer, indexBufferMemory) =
-            createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                         vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         copyBuffer(stagingBuffer, indexBuffer, bufferSize);
     }
@@ -639,6 +644,54 @@ namespace tempest
             uniformBuffersMemory.emplace_back(std::move(bufferMemory));
             // Persistent mapping since we are updating buffer every frame, it is better to persistent mapping.
             uniformBuffersMapped.emplace_back(uniformBuffersMemory.back().mapMemory(0, size));
+        }
+    }
+
+
+    void TempestEngine::createDescriptorPool()
+    {
+        // Specify the type of descriptor and their number
+        vk::DescriptorPoolSize poolSize{ .type            = vk::DescriptorType::eUniformBuffer,
+                                         .descriptorCount = MAX_FRAMES_IN_FLIGHT };
+        // eFreeDescriptorSet frees the descriptor on destruction as this property needs to be set manually.
+        vk::DescriptorPoolCreateInfo poolInfo{ .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+                                               .maxSets       = MAX_FRAMES_IN_FLIGHT,
+                                               .poolSizeCount = 1,
+                                               .pPoolSizes    = &poolSize };
+        descriptorPool = vk::raii::DescriptorPool(device, poolInfo);
+    }
+
+
+    void TempestEngine::createDescriptorSets()
+    {
+        // We need to specify the descriptor pool to allocate from as well as the number of descriptor set to allocate
+        // and the descriptor set layout they are based on.
+        std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, *descriptorSetLayout);
+        const vk::DescriptorSetAllocateInfo allocInfo{ .descriptorPool     = descriptorPool,
+                                                       .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
+                                                       .pSetLayouts        = layouts.data() };
+
+        // Create a descriptor set per frame in flight
+        // Allocate the descriptor
+        descriptorSets = device.allocateDescriptorSets(allocInfo);
+        // Populate it with data
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            // For overwriting the whole buffer we can use vk::WholeBuffer for range.
+            vk::DescriptorBufferInfo bufferInfo{ .buffer = uniformBuffers[i],
+                                                 .offset = 0,
+                                                 .range  = sizeof(UniformBufferObject) };
+            // The below struct specifies configuration for descriptor set updates.
+            vk::WriteDescriptorSet descriptorWrite{
+                // Which descriptor set to update and bind
+                .dstSet = descriptorSets[i], .dstBinding = 0,
+                .dstArrayElement = 0, // Can be array when specifying array of DescriptorSet(s)
+                .descriptorCount = 1,        .descriptorType = vk::DescriptorType::eUniformBuffer,
+                .pBufferInfo = &bufferInfo
+            };
+            // pImageInfo and pTexelBufferInfo can be used to bind image data and buffer views respectively
+            // apply the updates
+            device.updateDescriptorSets(descriptorWrite, {});
         }
     }
 
@@ -849,9 +902,14 @@ namespace tempest
         // Set dynamic states
         // NOTE: The negative height is due to the fact the glm has an inverted y axis in the projection matrix.
         commandBuffers[frameIndex].setViewport(0,
-                                               vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width),
+                                               vk::Viewport(0.0f, static_cast<float>(swapChainExtent.height),
+                                                            static_cast<float>(swapChainExtent.width),
                                                             -static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
         commandBuffers[frameIndex].setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
+
+        // Bind the descriptor set for uniforms
+        commandBuffers[frameIndex].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0,
+                                                      *descriptorSets[frameIndex], nullptr);
         // Draw
         commandBuffers[frameIndex].drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
         // End rendering
@@ -939,11 +997,11 @@ namespace tempest
     }
 
 
-    void TempestEngine::updateUniformBuffer(uint32_t currentImageIdx) noexcept
+    void TempestEngine::updateUniformBuffer(const uint32_t currentImageIdx) noexcept
     {
         static auto startTime  = std::chrono::high_resolution_clock::now();
         const auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        const float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
