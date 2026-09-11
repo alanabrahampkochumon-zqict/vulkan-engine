@@ -726,6 +726,18 @@ namespace tempest
             createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal,
                         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
                         vk::MemoryPropertyFlagBits::eDeviceLocal);
+        vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
+        // Transition the image from undefined to transfer optimal layout
+        transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eUndefined,
+                              vk::ImageLayout::eTransferDstOptimal);
+        // Copy the image from staging buffer to textureImage buffer
+        copyBufferToImage(commandBuffer, stagingBuffer, textureImage, static_cast<uint32_t>(texWidth),
+                          static_cast<uint32_t>(texHeight));
+        // Transition to a layout optimal for sampling
+        transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eTransferDstOptimal,
+                              vk::ImageLayout::eShaderReadOnlyOptimal);
+        // End the command
+        endSingleTimeCommands(std::move(commandBuffer));
     }
 
 
@@ -998,8 +1010,8 @@ namespace tempest
             .dstAccessMask       = dstAccessMask,
             .oldLayout           = oldLayout,
             .newLayout           = newLayout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image               = swapChainImages[imageIndex],
             // Since we transition render target, apply no mipmapping and the layer must be 1 unless for stereoscopic 3D
             .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
@@ -1014,6 +1026,74 @@ namespace tempest
                                                     .pImageMemoryBarriers    = &barrier };
 
         commandBuffers[frameIndex].pipelineBarrier2(dependencyInfo);
+    }
+
+    void TempestEngine::transitionImageLayout(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
+                                              const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout) noexcept
+    {
+        // To transition an image layout, we need to create a pipeline barrier
+        // This can be used for transitioning queue families when vk::SharingMode::eExclusive is used.
+        vk::ImageMemoryBarrier barrier{
+            .oldLayout           = oldLayout,
+            .newLayout           = newLayout,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .image               = image,
+            // Specify the affect part of the image
+            .subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, .levelCount = 1, .layerCount = 1 }
+        };
+
+        // SrcStage -> PipelineBarrier -> DstStage
+
+        vk::PipelineStageFlags sourceStage, destinationStage;
+        // We need to handle two transitions Undefined -> TransferOpt and TransferOpt -> ShaderOpt
+        // When transitioning from Undefined to ShaderOptimal
+        // we are going through TopOfPipe -> Transfer -> FragmentShader
+        // Moreover, transfer is a pseudo stage with compute and graphics pipeline.
+        if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal)
+        {
+            barrier.srcAccessMask = {};
+            barrier.dstAccessMask = {};
+
+
+            sourceStage      = vk::PipelineStageFlagBits::eTopOfPipe;
+            destinationStage = vk::PipelineStageFlagBits::eTransfer;
+        }
+        else if (oldLayout == vk::ImageLayout::eTransferDstOptimal &&
+                 newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+        {
+            barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+            sourceStage      = vk::PipelineStageFlagBits::eTransfer;
+            destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+        }
+        else
+        {
+            throw std::runtime_error("Unsupported layout transition");
+        }
+        commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, nullptr, barrier);
+
+        // commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {},{}, barrier);
+    }
+
+    void TempestEngine::copyBufferToImage(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Buffer& buffer,
+                                          vk::raii::Image& image, const uint32_t width, const uint32_t height) noexcept
+    {
+        // We need to specify which part of the buffer will be copied to which part of the image.
+        const vk::BufferImageCopy region{ .bufferOffset = 0,
+                                          // Specify that our image is tightly packed
+                                          .bufferRowLength   = 0,
+                                          .bufferImageHeight = 0,
+                                          .imageSubresource  = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+                                                                 .mipLevel       = 0,
+                                                                 .baseArrayLayer = 1,
+                                                                 .layerCount     = 1 },
+                                          .imageOffset       = { .x = 0, .y = 0, .z = 0 },
+                                          .imageExtent       = { .width = width, .height = height, .depth = 1 } };
+        // Layout indicate the layout the image is currently using.
+        // Copy to many images from the buffer is possible.
+        commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, region);
     }
 
 

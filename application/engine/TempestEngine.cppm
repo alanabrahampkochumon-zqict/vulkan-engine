@@ -54,22 +54,25 @@ namespace tempest
         void createCommandPool() noexcept;
         void createCommandBuffer() noexcept;
         void createSyncObjects() noexcept;
-        std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(uint32_t width, uint32_t height,
-                                                                       vk::Format format, vk::ImageTiling tiling,
-                                                                       vk::ImageUsageFlags usage,
-                                                                       vk::MemoryPropertyFlags properties) const noexcept;
+        std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(
+            uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
+            vk::MemoryPropertyFlags properties) const noexcept;
         void recordCommandBuffer(uint32_t imageIndex) noexcept;
         // Transition an image layout for rendering, submission etc.
         void transitionImageLayout(uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
                                    vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask,
                                    vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask) noexcept;
+        void transitionImageLayout(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
+                                   vk::ImageLayout oldLayout, vk::ImageLayout newLayout) noexcept;
+        void copyBufferToImage(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Buffer& buffer,
+                               vk::raii::Image& image, uint32_t width, uint32_t height) noexcept;
         std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer(
             vk::DeviceSize size, vk::BufferUsageFlags usageFlags, vk::MemoryPropertyFlags properties) const noexcept;
         void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer,
                         vk::DeviceSize bufferSize) const noexcept;
         void updateUniformBuffer(uint32_t currentImageIdx) noexcept;
         vk::raii::CommandBuffer beginSingleTimeCommands() const noexcept;
-        void endSingleTimeCommands(vk::raii::CommandBuffer&& commandBuffer) const noexcept;
+        void endSingleTimeCommands(const vk::raii::CommandBuffer&& commandBuffer) const noexcept;
         [[nodiscard]] uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 
 
