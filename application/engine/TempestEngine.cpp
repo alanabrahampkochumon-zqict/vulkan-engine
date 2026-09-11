@@ -703,7 +703,7 @@ namespace tempest
     {
         // Read the image
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("textures/textures.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         vk::DeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels)
@@ -722,27 +722,10 @@ namespace tempest
         // Free the image buffer
         stbi_image_free(pixels);
 
-        constexpr auto tiling = vk::ImageTiling::eOptimal; // Specifies how texels are arranged in memory
-        constexpr auto usage  = vk::ImageUsageFlagBits::eSampled;
-
-        vk::ImageCreateInfo imageInfo{ .imageType = vk::ImageType::e2D,
-                                       // Use the same format for texels as used for our pixels
-                                       .format      = swapChainSurfaceFormat.format,
-                                       .extent      = { .width = width, .height = height, .depth = 1 },
-                                       .mipLevels   = 1,
-                                       .arrayLayers = 1,
-                                       .samples     = vk::SampleCountFlagBits::e1, // Multisampling
-                                       .tiling      = tiling,
-                                       .usage       = usage,
-                                       .sharingMode = vk::SharingMode::eExclusive };
-        textureImage = vk::raii::Image(device, imageInfo);
-
-        const vk::MemoryRequirements memRequirements = textureImage.getMemoryRequirements();
-        vk::MemoryAllocateInfo allocateInfo{ .allocationSize = memRequirements.size,
-                                             .memoryTypeIndex =
-                                                 findMemoryType(memRequirements.memoryTypeBits, properties) };
-        textureImageMemory = vk::raii::DeviceMemory(device, allocateInfo);
-        textureImage.bindMemory(textureImageMemory, 0);
+        std::tie(textureImage, textureImageMemory) =
+            createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal,
+                        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+                        vk::MemoryPropertyFlagBits::eDeviceLocal);
     }
 
 
@@ -913,6 +896,33 @@ namespace tempest
     }
 
 
+    std::pair<vk::raii::Image, vk::raii::DeviceMemory> TempestEngine::createImage(
+        const uint32_t width, const uint32_t height, const vk::Format format, const vk::ImageTiling tiling,
+        const vk::ImageUsageFlags usage, const vk::MemoryPropertyFlags properties) const noexcept
+    {
+        const vk::ImageCreateInfo imageInfo{ .imageType   = vk::ImageType::e2D,
+                                             .format      = format,
+                                             .extent      = { .width = width, .height = height, .depth = 1 },
+                                             .mipLevels   = 1,
+                                             .arrayLayers = 1,
+                                             .samples     = vk::SampleCountFlagBits::e1,
+                                             .tiling      = tiling,
+                                             .usage       = usage,
+                                             .sharingMode = vk::SharingMode::eExclusive };
+
+        auto image = vk::raii::Image(device, imageInfo);
+
+        const vk::MemoryRequirements memRequirements = image.getMemoryRequirements();
+        const vk::MemoryAllocateInfo allocInfo{ .allocationSize = memRequirements.size,
+                                                .memoryTypeIndex =
+                                                    findMemoryType(memRequirements.memoryTypeBits, properties) };
+        auto imageMemory = vk::raii::DeviceMemory(device, allocInfo);
+        image.bindMemory(imageMemory, 0);
+
+        return std::make_pair(std::move(image), std::move(imageMemory));
+    }
+
+
     void TempestEngine::recordCommandBuffer(const uint32_t imageIndex) noexcept
     {
         // Begin the command recording
@@ -1028,23 +1038,9 @@ namespace tempest
     void TempestEngine::copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer,
                                    const vk::DeviceSize bufferSize) const noexcept
     {
-        const vk::CommandBufferAllocateInfo bufferInfo{ .commandPool        = commandPool,
-                                                        .level              = vk::CommandBufferLevel::ePrimary,
-                                                        .commandBufferCount = 1 };
-        const vk::raii::CommandBuffer commandCopyBuffer = std::move(device.allocateCommandBuffers(bufferInfo).front());
-
-        // Recording of the command buffer will only be used once and will be reset
-        // and recorded again between submissions
-        commandCopyBuffer.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        commandCopyBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy(0, 0, bufferSize));
-        commandCopyBuffer.end();
-
-        // Execute the buffer to complete the transfer
-        // Since there are not events waiting on the graphics queue unlike draw commands
-        // we can drop the fence and use waitIdle
-        graphicsQueue.submit(vk::SubmitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*commandCopyBuffer },
-                             nullptr);
-        graphicsQueue.waitIdle();
+        auto copyCommandBuffer = beginSingleTimeCommands();
+        copyCommandBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy(0, 0, bufferSize));
+        endSingleTimeCommands(std::move(copyCommandBuffer));
     }
 
 
@@ -1061,6 +1057,34 @@ namespace tempest
             glm::radians(45.0f), static_cast<float>(swapChainExtent.width) / static_cast<float>(swapChainExtent.height),
             0.1f, 10.0f);
         memcpy(uniformBuffersMapped[currentImageIdx], &ubo, sizeof(ubo));
+    }
+
+
+    vk::raii::CommandBuffer TempestEngine::beginSingleTimeCommands() const noexcept
+    {
+        // Create a command buffer for one time submission
+        const vk::CommandBufferAllocateInfo allocateInfo{ .commandPool        = commandPool,
+                                                          .level              = vk::CommandBufferLevel::ePrimary,
+                                                          .commandBufferCount = 1 };
+        vk::raii::CommandBuffer commandBuffer = std::move(vk::raii::CommandBuffers(device, allocateInfo).front());
+        constexpr vk::CommandBufferBeginInfo beginInfo{ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
+        // Begin recording
+        commandBuffer.begin(beginInfo);
+
+        // Return the command buffer.
+        return commandBuffer;
+    }
+
+
+    void TempestEngine::endSingleTimeCommands(const vk::raii::CommandBuffer&& commandBuffer) const noexcept
+    {
+        // End the command buffer
+        commandBuffer.end();
+
+        // Submit the command
+        const vk::SubmitInfo submitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*commandBuffer };
+        graphicsQueue.submit(submitInfo);
+        graphicsQueue.waitIdle();
     }
 
 
