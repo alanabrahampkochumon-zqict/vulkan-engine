@@ -10,6 +10,7 @@ struct UniformBuffer {
     float4x4 proj;
 };
 ConstantBuffer<UniformBuffer> ubo;
+Sampler2D texture;
 
 struct VertexOutput {
     float4 pos: SV_Position;
@@ -29,5 +30,5 @@ VertexOutput vertMain(VSInput input) {
 
 [shader("fragment")]
 float4 fragMain(VertexOutput inVert): SV_Target {
-    return float4(inVert.fragTexCoord, 1.0);
+    return texture.Sample(inVert.fragTexCoord);
 }

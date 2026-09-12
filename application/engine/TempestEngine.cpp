@@ -1147,7 +1147,7 @@ namespace tempest
                                           .bufferImageHeight = 0,
                                           .imageSubresource  = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
                                                                  .mipLevel       = 0,
-                                                                 .baseArrayLayer = 1,
+                                                                 .baseArrayLayer = 0,
                                                                  .layerCount     = 1 },
                                           .imageOffset       = { .x = 0, .y = 0, .z = 0 },
                                           .imageExtent       = { .width = width, .height = height, .depth = 1 } };
