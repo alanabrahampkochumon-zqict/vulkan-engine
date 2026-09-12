@@ -91,6 +91,7 @@ namespace tempest
         createDescriptorPool();
         createDescriptorSets();
         createGraphicsPipeline();
+        createTextureImageView();
         createSyncObjects();
     }
 
@@ -417,24 +418,10 @@ namespace tempest
     void TempestEngine::createImageViews()
     {
         assert(swapChainImageViews.empty());
-        vk::ImageViewCreateInfo imageViewCreateInfo{
-            .viewType         = vk::ImageViewType::e2D,
-            .format           = swapChainSurfaceFormat.format,
-            .components       = { .r = vk::ComponentSwizzle::eIdentity,
-                                  .g = vk::ComponentSwizzle::eIdentity,
-                                  .b = vk::ComponentSwizzle::eIdentity,
-                                  .a = vk::ComponentSwizzle::eIdentity },
-            .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
-                                  .baseMipLevel   = 0,
-                                  .levelCount     = 1,
-                                  .baseArrayLayer = 0,
-                                  .layerCount     = 1 },
-        };
-
+        swapChainImageViews.reserve(swapChainImages.size());
         for (const auto& image : swapChainImages)
         {
-            imageViewCreateInfo.image = image;
-            swapChainImageViews.emplace_back(device, imageViewCreateInfo);
+            swapChainImageViews.emplace_back(createImageView(image, swapChainSurfaceFormat.format));
         }
     }
 
@@ -738,6 +725,25 @@ namespace tempest
                               vk::ImageLayout::eShaderReadOnlyOptimal);
         // End the command
         endSingleTimeCommands(std::move(commandBuffer));
+    }
+
+
+    void TempestEngine::createTextureImageView()
+    { textureImageView = createImageView(*textureImage, vk::Format::eR8G8B8A8Srgb); }
+
+
+    vk::raii::ImageView TempestEngine::createImageView(const vk::Image& image, const vk::Format format) const
+    {
+        const vk::ImageViewCreateInfo viewInfo{ .image            = image,
+                                                .viewType         = vk::ImageViewType::e2D,
+                                                .format           = format,
+                                                .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+                                                                      .baseMipLevel   = 0,
+                                                                      .levelCount     = 1,
+                                                                      .baseArrayLayer = 0,
+                                                                      .layerCount     = 1 } };
+
+        return vk::raii::ImageView(device, viewInfo);
     }
 
 

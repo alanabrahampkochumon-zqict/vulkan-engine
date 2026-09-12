@@ -44,6 +44,8 @@ namespace tempest
         void createDescriptorPool();
         void createDescriptorSets();
         void createTextureImage();
+        void createTextureImageView();
+        vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format) const;
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -112,6 +114,7 @@ namespace tempest
         std::vector<vk::raii::DescriptorSet> descriptorSets{};
         vk::raii::Image textureImage{ nullptr };
         vk::raii::DeviceMemory textureImageMemory{ nullptr };
+        vk::raii::ImageView textureImageView{ nullptr };
 
         // Fence is required since we don't want to overwrite the currently rendering frame
         std::vector<vk::raii::Fence> drawFences{};
