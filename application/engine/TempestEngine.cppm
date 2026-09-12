@@ -56,6 +56,7 @@ namespace tempest
         void createCommandPool() noexcept;
         void createCommandBuffer() noexcept;
         void createSyncObjects() noexcept;
+        void createTextureSampler() noexcept;
         std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(
             uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
             vk::MemoryPropertyFlags properties) const noexcept;
@@ -115,6 +116,7 @@ namespace tempest
         vk::raii::Image textureImage{ nullptr };
         vk::raii::DeviceMemory textureImageMemory{ nullptr };
         vk::raii::ImageView textureImageView{ nullptr };
+        vk::raii::Sampler textureSampler{ nullptr };
 
         // Fence is required since we don't want to overwrite the currently rendering frame
         std::vector<vk::raii::Fence> drawFences{};

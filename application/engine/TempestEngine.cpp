@@ -297,7 +297,8 @@ namespace tempest
             const auto devFeatures = pd.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
                                                      vk::PhysicalDeviceVulkan13Features,
                                                      vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
-            const auto requiredFeatures = devFeatures.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
+            const auto requiredFeatures = devFeatures.get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy &&
+                devFeatures.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
                 devFeatures.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
                 devFeatures.get<vk::PhysicalDeviceVulkan13Features>().synchronization2 &&
                 devFeatures.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
@@ -357,7 +358,7 @@ namespace tempest
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
                            vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
             featureChain = {
-                {},                                                     // Vulkan 1.0 features
+                { .features = { .samplerAnisotropy = true } },          // Physical Device Features
                 { .shaderDrawParameters = true },                       // Vulkan 1.1 features
                 { .synchronization2 = true, .dynamicRendering = true }, // Vulkan 1.3 features
                 { .extendedDynamicState = true }                        // Dynamic state
@@ -911,6 +912,35 @@ namespace tempest
             presentFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
             drawFences.emplace_back(device, vk::FenceCreateInfo{ .flags = vk::FenceCreateFlagBits::eSignaled });
         }
+    }
+
+
+    void TempestEngine::createTextureSampler() noexcept
+    {
+        const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
+        vk::SamplerCreateInfo samplerInfo{ .magFilter    = vk::Filter::eLinear,
+                                           .minFilter    = vk::Filter::eLinear,
+                                           .mipmapMode   = vk::SamplerMipmapMode::eLinear,
+                                           .addressModeU = vk::SamplerAddressMode::eRepeat,
+                                           .addressModeV = vk::SamplerAddressMode::eRepeat,
+                                           .addressModeW = vk::SamplerAddressMode::eRepeat,
+                                           // Anisotropic filtering
+                                           .anisotropyEnable = vk::True,
+                                           .maxAnisotropy    = properties.limits.maxSamplerAnisotropy,
+                                           // If comparison is enabled then texels will be compared to a value.
+                                           .compareEnable = vk::True,
+                                           .compareOp     = vk::CompareOp::eAlways };
+        // What color to use beyond the clamp. Cannot specify an arbitrary color.
+        samplerInfo.borderColor = vk::BorderColor::eFloatOpaqueBlack;
+        // Unnormalized coordinates allows us to sample beyond the [0,1) range.
+        samplerInfo.unnormalizedCoordinates = vk::False;
+        // Map mapping
+        samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.minLod     = 0.0f;
+        samplerInfo.maxLod     = 0.0f;
+
+        textureSampler = vk::raii::Sampler(device, samplerInfo);
     }
 
 
