@@ -89,9 +89,10 @@ namespace tempest
         createUniformBuffers();
         createDescriptorSetLayout();
         createDescriptorPool();
+        createTextureSampler();
+        createTextureImageView();
         createDescriptorSets();
         createGraphicsPipeline();
-        createTextureImageView();
         createSyncObjects();
     }
 
@@ -429,11 +430,21 @@ namespace tempest
 
     void TempestEngine::createDescriptorSetLayout()
     {
-        vk::DescriptorSetLayoutBinding uboLayoutBinding{ .binding         = 0,
-                                                         .descriptorType  = vk::DescriptorType::eUniformBuffer,
-                                                         .descriptorCount = 1,
-                                                         .stageFlags      = vk::ShaderStageFlagBits::eVertex };
-        const vk::DescriptorSetLayoutCreateInfo layoutInfo{ .bindingCount = 1, .pBindings = &uboLayoutBinding };
+
+        std::array<vk::DescriptorSetLayoutBinding, 2> bindings{
+            { {
+                  .binding         = 0,
+                  .descriptorType  = vk::DescriptorType::eUniformBuffer,
+                  .descriptorCount = 1,
+                  .stageFlags      = vk::ShaderStageFlagBits::eVertex,
+              },
+              { .binding         = 1,
+                .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
+                .descriptorCount = 1,
+                .stageFlags      = vk::ShaderStageFlagBits::eFragment } }
+        };
+        const vk::DescriptorSetLayoutCreateInfo layoutInfo{ .bindingCount = static_cast<uint32_t>(bindings.size()),
+                                                            .pBindings    = bindings.data() };
         descriptorSetLayout = vk::raii::DescriptorSetLayout(device, layoutInfo);
     }
 
@@ -642,13 +653,15 @@ namespace tempest
     void TempestEngine::createDescriptorPool()
     {
         // Specify the type of descriptor and their number
-        vk::DescriptorPoolSize poolSize{ .type            = vk::DescriptorType::eUniformBuffer,
-                                         .descriptorCount = MAX_FRAMES_IN_FLIGHT };
+        std::array<vk::DescriptorPoolSize, 2> poolSizes{
+            { { .type = vk::DescriptorType::eUniformBuffer, .descriptorCount = MAX_FRAMES_IN_FLIGHT },
+              { .type = vk::DescriptorType::eCombinedImageSampler, .descriptorCount = MAX_FRAMES_IN_FLIGHT } }
+        };
         // eFreeDescriptorSet frees the descriptor on destruction as this property needs to be set manually.
-        vk::DescriptorPoolCreateInfo poolInfo{ .flags         = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-                                               .maxSets       = MAX_FRAMES_IN_FLIGHT,
-                                               .poolSizeCount = 1,
-                                               .pPoolSizes    = &poolSize };
+        const vk::DescriptorPoolCreateInfo poolInfo{ .flags   = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+                                                     .maxSets = MAX_FRAMES_IN_FLIGHT,
+                                                     .poolSizeCount = poolSizes.size(),
+                                                     .pPoolSizes    = poolSizes.data() };
         descriptorPool = vk::raii::DescriptorPool(device, poolInfo);
     }
 
@@ -672,17 +685,28 @@ namespace tempest
             vk::DescriptorBufferInfo bufferInfo{ .buffer = uniformBuffers[i],
                                                  .offset = 0,
                                                  .range  = sizeof(UniformBufferObject) };
+            vk::DescriptorImageInfo imageInfo{ .sampler     = textureSampler,
+                                               .imageView   = textureImageView,
+                                               .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
             // The below struct specifies configuration for descriptor set updates.
-            vk::WriteDescriptorSet descriptorWrite{
-                // Which descriptor set to update and bind
-                .dstSet = descriptorSets[i], .dstBinding = 0,
-                .dstArrayElement = 0, // Can be array when specifying array of DescriptorSet(s)
-                .descriptorCount = 1,        .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .pBufferInfo = &bufferInfo
+            std::array<vk::WriteDescriptorSet, 2> descriptorWrites{
+                { { // Which descriptor set to update and bind
+                    .dstSet          = descriptorSets[i],
+                    .dstBinding      = 0,
+                    .dstArrayElement = 0, // Can be array when specifying array of DescriptorSet(s)
+                    .descriptorCount = 1,
+                    .descriptorType  = vk::DescriptorType::eUniformBuffer,
+                    .pBufferInfo     = &bufferInfo },
+                  { .dstSet          = descriptorSets[i],
+                    .dstBinding      = 1,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
+                    .pImageInfo      = &imageInfo } }
             };
             // pImageInfo and pTexelBufferInfo can be used to bind image data and buffer views respectively
             // apply the updates
-            device.updateDescriptorSets(descriptorWrite, {});
+            device.updateDescriptorSets(descriptorWrites, {});
         }
     }
 

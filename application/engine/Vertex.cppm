@@ -23,6 +23,7 @@ namespace tempest
     {
         glm::vec2 pos;
         glm::vec3 color;
+        glm::vec2 texCoord;
 
         [[nodiscard]] constexpr static vk::VertexInputBindingDescription getBindingDescription() noexcept
         {
@@ -34,12 +35,12 @@ namespace tempest
                      .inputRate = vk::VertexInputRate::eVertex };
         }
 
-        [[nodiscard]] constexpr static std::array<vk::VertexInputAttributeDescription, 2>
+        [[nodiscard]] constexpr static std::array<vk::VertexInputAttributeDescription, 3>
         getAttributeDescription() noexcept
         {
             // Describes a struct telling vulkan on how to extract a vertex attribute from a chunk of vertex data
             // from binding description
-            return std::array{
+            return { {
                 vk::VertexInputAttributeDescription{ .location = 0,
                                                      .binding  = 0,
                                                      .format   = vk::Format::eR32G32Sfloat,
@@ -47,8 +48,12 @@ namespace tempest
                 vk::VertexInputAttributeDescription{ .location = 1,
                                                      .binding  = 0,
                                                      .format   = vk::Format::eR32G32B32Sfloat,
-                                                     .offset   = offsetof(Vertex, color) } // Color
-            };
+                                                     .offset   = offsetof(Vertex, color) }, // Color
+                vk::VertexInputAttributeDescription{ .location = 2,
+                                                     .binding  = 0,
+                                                     .format   = vk::Format::eR32G32Sfloat,
+                                                     .offset   = offsetof(Vertex, texCoord) } // Texture Coordinates
+            } };
         }
     };
 } // namespace tempest
