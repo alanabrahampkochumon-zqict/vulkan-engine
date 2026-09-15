@@ -83,6 +83,7 @@ namespace tempest
                                                      vk::FormatFeatureFlags features) const;
         [[nodiscard]] vk::Format findDepthFormat() const;
         void recreateSwapChain();
+        void cleanupSwapChain();
 
 
         std::string appName{}, appVersion{}, appId{};

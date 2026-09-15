@@ -46,7 +46,7 @@ namespace tempest
             SDL_Log("Cannot initialize SDL window");
         }
 
-        window = SDL_CreateWindow(appName.c_str(), this->width, this->height, SDL_WINDOW_VULKAN);
+        window = SDL_CreateWindow(appName.c_str(), this->width, this->height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
         initVulkan();
 
@@ -818,6 +818,9 @@ namespace tempest
                 case SDL_EVENT_QUIT:
                     _isRunning = false;
                     break;
+                case SDL_EVENT_WINDOW_RESIZED:
+                    recreateSwapChain();
+                    break;
                 default:
                     break;
                     // SDL_Log("Unhandled event!");
@@ -1315,7 +1318,7 @@ namespace tempest
 
     void TempestEngine::recreateSwapChain()
     {
-        int width, height;
+        int width{ 0 }, height{ 0 };
         while (width == 0 || height == 0)
         {
             SDL_GetWindowSize(window, &width, &height);
@@ -1323,9 +1326,18 @@ namespace tempest
         }
         device.waitIdle();
 
-        // cleanupSwapChain(); NOT required for RAII
+
+        cleanupSwapChain();
         createSwapChain();
         createImageViews();
         createDepthResources();
+    }
+
+    void TempestEngine::cleanupSwapChain()
+    {
+        // Cleanup SwapChain
+        swapChain = nullptr; // Rest will be done by vk::raii dtor
+        swapChainImages.clear();
+        swapChainImageViews.clear();
     }
 } // namespace tempest
