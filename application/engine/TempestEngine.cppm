@@ -45,7 +45,9 @@ namespace tempest
         void createDescriptorSets();
         void createTextureImage();
         void createTextureImageView();
-        vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format) const;
+        void createDepthResources();
+        vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format,
+                                            vk::ImageAspectFlags aspectFlags) const;
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -77,6 +79,9 @@ namespace tempest
         vk::raii::CommandBuffer beginSingleTimeCommands() const noexcept;
         void endSingleTimeCommands(const vk::raii::CommandBuffer&& commandBuffer) const noexcept;
         [[nodiscard]] uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
+        [[nodiscard]] vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
+                                                     vk::FormatFeatureFlags features) const;
+        [[nodiscard]] vk::Format findDepthFormat() const;
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -117,6 +122,9 @@ namespace tempest
         vk::raii::DeviceMemory textureImageMemory{ nullptr };
         vk::raii::ImageView textureImageView{ nullptr };
         vk::raii::Sampler textureSampler{ nullptr };
+        vk::raii::Image depthImage{ nullptr };
+        vk::raii::DeviceMemory depthImageMemory{ nullptr };
+        vk::raii::ImageView depthImageView{ nullptr };
 
         // Fence is required since we don't want to overwrite the currently rendering frame
         std::vector<vk::raii::Fence> drawFences{};

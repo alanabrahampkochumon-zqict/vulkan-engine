@@ -89,6 +89,7 @@ namespace tempest
         createUniformBuffers();
         createDescriptorSetLayout();
         createDescriptorPool();
+        createDepthResources();
         createTextureSampler();
         createTextureImageView();
         createDescriptorSets();
@@ -423,7 +424,8 @@ namespace tempest
         swapChainImageViews.reserve(swapChainImages.size());
         for (const auto& image : swapChainImages)
         {
-            swapChainImageViews.emplace_back(createImageView(image, swapChainSurfaceFormat.format));
+            swapChainImageViews.emplace_back(
+                createImageView(image, swapChainSurfaceFormat.format, vk::ImageAspectFlagBits::eColor));
         }
     }
 
@@ -754,15 +756,26 @@ namespace tempest
 
 
     void TempestEngine::createTextureImageView()
-    { textureImageView = createImageView(*textureImage, vk::Format::eR8G8B8A8Srgb); }
+    { textureImageView = createImageView(*textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor); }
 
 
-    vk::raii::ImageView TempestEngine::createImageView(const vk::Image& image, const vk::Format format) const
+    void TempestEngine::createDepthResources()
+    {
+        const vk::Format format = findDepthFormat();
+        std::tie(depthImage, depthImageMemory) =
+            createImage(swapChainExtent.width, swapChainExtent.height, format, vk::ImageTiling::eOptimal,
+                        vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        depthImageView = createImageView(depthImage, format, vk::ImageAspectFlagBits::eDepth);
+    }
+
+
+    vk::raii::ImageView TempestEngine::createImageView(const vk::Image& image, const vk::Format format,
+                                                       const vk::ImageAspectFlags aspectFlags) const
     {
         const vk::ImageViewCreateInfo viewInfo{ .image            = image,
                                                 .viewType         = vk::ImageViewType::e2D,
                                                 .format           = format,
-                                                .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+                                                .subresourceRange = { .aspectMask     = aspectFlags,
                                                                       .baseMipLevel   = 0,
                                                                       .levelCount     = 1,
                                                                       .baseArrayLayer = 0,
@@ -1245,5 +1258,30 @@ namespace tempest
         }
 
         throw std::runtime_error("Failed to find a suitable memory type.");
+    }
+
+
+    vk::Format TempestEngine::findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
+                                                  vk::FormatFeatureFlags features) const
+    {
+        for (const auto format : candidates)
+        {
+            vk::FormatProperties properties = physicalDevice.getFormatProperties(format);
+            // Support of format depends on the tiling mode and usage
+            if (((tiling == vk::ImageTiling::eLinear) && ((properties.linearTilingFeatures & features) == features)) ||
+                ((tiling == vk::ImageTiling::eOptimal) && ((properties.optimalTilingFeatures & features) == features)))
+            {
+                return format;
+            }
+        }
+        throw std::runtime_error("Failed o find the supported format!");
+    }
+
+
+    vk::Format TempestEngine::findDepthFormat() const
+    {
+        return findSupportedFormat(
+            { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
+            vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
     }
 } // namespace tempest
