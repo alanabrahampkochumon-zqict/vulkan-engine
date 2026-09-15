@@ -10,6 +10,7 @@ module;
  */
 
 #include <array>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
@@ -21,7 +22,7 @@ namespace tempest
 {
     export struct Vertex
     {
-        glm::vec2 pos;
+        glm::vec3 pos;
         glm::vec3 color;
         glm::vec2 texCoord;
 
@@ -43,7 +44,7 @@ namespace tempest
             return { {
                 vk::VertexInputAttributeDescription{ .location = 0,
                                                      .binding  = 0,
-                                                     .format   = vk::Format::eR32G32Sfloat,
+                                                     .format   = vk::Format::eR32G32B32Sfloat,
                                                      .offset   = offsetof(Vertex, pos) }, // Position
                 vk::VertexInputAttributeDescription{ .location = 1,
                                                      .binding  = 0,
