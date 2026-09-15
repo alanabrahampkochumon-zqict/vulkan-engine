@@ -463,6 +463,13 @@ namespace tempest
                                                                           .pName  = "fragMain" };
 
         vk::PipelineShaderStageCreateInfo shaderStages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
+        vk::PipelineDepthStencilStateCreateInfo depthStencil{
+            .depthTestEnable       = vk::True,
+            .depthWriteEnable      = vk::True,
+            .depthCompareOp        = vk::CompareOp::eLess,
+            .depthBoundsTestEnable = vk::False, //
+            .stencilTestEnable     = vk::False,
+        };
 
         /// States like viewport dimensions, line width, and blend constants can be changed
         /// without recreating the graphics pipeline at draw time, but we need to specify a dynamic state to do so.
@@ -570,12 +577,15 @@ namespace tempest
               .pViewportState      = &viewportState,
               .pRasterizationState = &rasterizer,
               .pMultisampleState   = &multisampling,
+              .pDepthStencilState  = &depthStencil,
               .pColorBlendState    = &colorBlending,
               .pDynamicState       = &dynamicState,
               .layout              = pipelineLayout,
               .renderPass          = nullptr },
 
-            { .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChainSurfaceFormat.format }
+            { .colorAttachmentCount    = 1,
+              .pColorAttachmentFormats = &swapChainSurfaceFormat.format,
+              .depthAttachmentFormat   = findDepthFormat() }
         };
         // BasePipelineHandle and BasePipelineIndex -> used for inheriting pipelines
 
@@ -1008,20 +1018,29 @@ namespace tempest
     }
 
 
-    void TempestEngine::recordCommandBuffer(const uint32_t imageIndex) noexcept
+    void TempestEngine::recordCommandBuffer(const uint32_t imageIndex) const noexcept
     {
         // Begin the command recording
         // const vk::CommandBufferBeginInfo beginInfo{};
         commandBuffers[frameIndex].begin({});
 
         // Transition swap chain image to ImageLayout::eColorAttachmentOptimal
-        transitionImageLayout(imageIndex, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
-                              {}, // no need to wait for previous operation
+        transitionImageLayout(swapChainImages[imageIndex], vk::ImageLayout::eUndefined,
+                              vk::ImageLayout::eColorAttachmentOptimal, {}, // no need to wait for previous operation
                               vk::AccessFlagBits2::eColorAttachmentWrite,
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                              vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+                              vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::ImageAspectFlagBits::eColor);
+        // Transition depth image to depth attachment optimal layout
+        // We need a single barrier for depth attachment writes(we don't care after rendering).
+        transitionImageLayout(
+            *depthImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthAttachmentOptimal,
+            vk::AccessFlagBits2::eDepthStencilAttachmentWrite, vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+            vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+            vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+            vk::ImageAspectFlagBits::eDepth);
 
         constexpr vk::ClearColorValue clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+        constexpr vk::ClearDepthStencilValue clearDepth{ .depth = 1.0f, .stencil = 0 };
 
         // Dynamic rendering doesn't require a RenderPass but we need to specify the attachment info
         vk::RenderingAttachmentInfo attachmentInfo{
@@ -1032,12 +1051,19 @@ namespace tempest
             .clearValue  = clearColor
         };
 
+        vk::RenderingAttachmentInfo depthAttachmentInfo{ .imageView   = depthImageView,
+                                                         .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+                                                         .loadOp      = vk::AttachmentLoadOp::eClear,
+                                                         .storeOp     = vk::AttachmentStoreOp::eDontCare,
+                                                         .clearValue  = clearDepth };
+
         // Create the rendering info
         const vk::RenderingInfo renderingInfo{ .renderArea           = { .offset = { .x = 0, .y = 0 },
                                                                          .extent = swapChainExtent },
                                                .layerCount           = 1,
                                                .colorAttachmentCount = 1,
-                                               .pColorAttachments    = &attachmentInfo };
+                                               .pColorAttachments    = &attachmentInfo,
+                                               .pDepthAttachment     = &depthAttachmentInfo };
 
         // Begin Rendering
         commandBuffers[frameIndex].beginRendering(renderingInfo);
@@ -1062,19 +1088,20 @@ namespace tempest
         commandBuffers[frameIndex].endRendering();
 
         // Transition image layout for presentation
-        transitionImageLayout(imageIndex, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR,
-                              vk::AccessFlagBits2::eColorAttachmentWrite, {},
+        transitionImageLayout(swapChainImages[imageIndex], vk::ImageLayout::eColorAttachmentOptimal,
+                              vk::ImageLayout::ePresentSrcKHR, vk::AccessFlagBits2::eColorAttachmentWrite, {},
                               vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                              vk::PipelineStageFlagBits2::eBottomOfPipe);
+                              vk::PipelineStageFlagBits2::eBottomOfPipe, vk::ImageAspectFlagBits::eColor);
         commandBuffers[frameIndex].end();
     }
 
 
-    void TempestEngine::transitionImageLayout(const uint32_t imageIndex, const vk::ImageLayout oldLayout,
+    void TempestEngine::transitionImageLayout(const vk::Image image, const vk::ImageLayout oldLayout,
                                               const vk::ImageLayout newLayout, const vk::AccessFlags2 srcAccessMask,
                                               const vk::AccessFlags2 dstAccessMask,
                                               const vk::PipelineStageFlags2 srcStageMask,
-                                              const vk::PipelineStageFlags2 dstStageMask) noexcept
+                                              const vk::PipelineStageFlags2 dstStageMask,
+                                              const vk::ImageAspectFlags aspectFlags) const noexcept
     {
         vk::ImageMemoryBarrier2 barrier = {
             .srcStageMask        = srcStageMask,
@@ -1085,9 +1112,9 @@ namespace tempest
             .newLayout           = newLayout,
             .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-            .image               = swapChainImages[imageIndex],
+            .image               = image,
             // Since we transition render target, apply no mipmapping and the layer must be 1 unless for stereoscopic 3D
-            .subresourceRange = { .aspectMask     = vk::ImageAspectFlagBits::eColor,
+            .subresourceRange = { .aspectMask     = aspectFlags,
                                   .baseMipLevel   = 0,
                                   .levelCount     = 1,
                                   .baseArrayLayer = 0,
@@ -1283,5 +1310,22 @@ namespace tempest
         return findSupportedFormat(
             { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
             vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+    }
+
+
+    void TempestEngine::recreateSwapChain()
+    {
+        int width, height;
+        while (width == 0 || height == 0)
+        {
+            SDL_GetWindowSize(window, &width, &height);
+            SDL_WaitEvent(nullptr);
+        }
+        device.waitIdle();
+
+        // cleanupSwapChain(); NOT required for RAII
+        createSwapChain();
+        createImageViews();
+        createDepthResources();
     }
 } // namespace tempest

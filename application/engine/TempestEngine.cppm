@@ -62,11 +62,11 @@ namespace tempest
         std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(
             uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
             vk::MemoryPropertyFlags properties) const noexcept;
-        void recordCommandBuffer(uint32_t imageIndex) noexcept;
+        void recordCommandBuffer(uint32_t imageIndex) const noexcept;
         // Transition an image layout for rendering, submission etc.
-        void transitionImageLayout(uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
+        void transitionImageLayout(vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
                                    vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask,
-                                   vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask) noexcept;
+                                   vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask, vk::ImageAspectFlags aspectFlags) const noexcept;
         void transitionImageLayout(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
                                    vk::ImageLayout oldLayout, vk::ImageLayout newLayout) noexcept;
         void copyBufferToImage(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Buffer& buffer,
@@ -82,6 +82,7 @@ namespace tempest
         [[nodiscard]] vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
                                                      vk::FormatFeatureFlags features) const;
         [[nodiscard]] vk::Format findDepthFormat() const;
+        void recreateSwapChain();
 
 
         std::string appName{}, appVersion{}, appId{};
