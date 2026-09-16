@@ -33,4 +33,5 @@ target_link_libraries(
         Vulkan::Headers
         glm::glm # TODO: Replace with Falcon
         std::stb
+        tinyobjloader
 )

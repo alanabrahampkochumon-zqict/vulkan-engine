@@ -24,6 +24,16 @@ FetchContent_Declare(
         SYSTEM
 )
 
+
+# TinyObjLoader gives error with compatability
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum policy version" FORCE)
+FetchContent_Declare(
+        tinyobj
+        GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
+        GIT_TAG v1.0.6
+        SYSTEM
+)
+
 # TODO: Replace glm with our falcon math library
 FetchContent_Declare(
         glm
@@ -89,6 +99,7 @@ FetchContent_MakeAvailable(googlebenchmark)
 FetchContent_MakeAvailable(sdl3)
 FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(stb)
+FetchContent_MakeAvailable(tinyobj)
 
 add_library(stb INTERFACE
         ${stb_SOURCE_DIR}/stb_image.h
