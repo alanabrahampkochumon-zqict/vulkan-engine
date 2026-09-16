@@ -12,9 +12,13 @@ module;
 #include <array>
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
+
+
 export module TempestEngine:Vertex;
 
 
@@ -56,5 +60,18 @@ namespace tempest
                                                      .offset   = offsetof(Vertex, texCoord) } // Texture Coordinates
             } };
         }
+
+        [[nodiscard]] bool operator==(const Vertex& other) const
+        { return pos == other.pos && color == other.color && texCoord == other.texCoord; }
     };
 } // namespace tempest
+
+export template <>
+struct std::hash<tempest::Vertex>
+{
+    size_t operator()(const tempest::Vertex& vertex) const noexcept
+    {
+        return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+            (hash<glm::vec2>()(vertex.texCoord) << 1);
+    }
+}; // namespace std

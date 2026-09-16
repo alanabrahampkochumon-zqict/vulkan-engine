@@ -1364,6 +1364,8 @@ namespace tempest
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
+        std::unordered_map<Vertex, uint32_t> uniqueVertices;
+
         std::string err;
         if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH))
         {
@@ -1381,12 +1383,17 @@ namespace tempest
                     attrib.vertices[3 * index.vertex_index + 1],
                     attrib.vertices[3 * index.vertex_index + 2],
                 };
+                // Flip texture coordinates to Top To Bottom
                 vertex.texCoord = { attrib.texcoords[2 * index.texcoord_index + 0],
-                                    attrib.texcoords[2 * index.texcoord_index + 1] };
+                                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
                 vertex.color    = { 1.0f, 1.0f, 1.0f };
 
-                vertices.push_back(vertex);
-                indices.push_back(indices.size());
+                auto [it, inserted] = uniqueVertices.insert({ vertex, static_cast<uint32_t>(vertices.size()) });
+                if (inserted)
+                {
+                    vertices.push_back(vertex);
+                }
+                indices.push_back(it->second);
             }
         }
     }
