@@ -48,8 +48,8 @@ namespace tempest
         void createTextureImage();
         void createTextureImageView();
         void createDepthResources();
-        vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format,
-                                            vk::ImageAspectFlags aspectFlags) const;
+        vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format, vk::ImageAspectFlags aspectFlags,
+                                            uint32_t mipLevel) const;
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
         vk::SurfaceFormatKHR chooseSurfaceFormat(
@@ -61,9 +61,11 @@ namespace tempest
         void createCommandBuffer() noexcept;
         void createSyncObjects() noexcept;
         void createTextureSampler() noexcept;
-        std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(
-            uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
-            vk::MemoryPropertyFlags properties) const noexcept;
+        std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(uint32_t width, uint32_t height,
+                                                                       vk::Format format, vk::ImageTiling tiling,
+                                                                       vk::ImageUsageFlags usage,
+                                                                       vk::MemoryPropertyFlags properties,
+                                                                       uint32_t mipLevels) const noexcept;
         void recordCommandBuffer(uint32_t imageIndex) const noexcept;
         // Transition an image layout for rendering, submission etc.
         void transitionImageLayout(vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
@@ -71,7 +73,7 @@ namespace tempest
                                    vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask,
                                    vk::ImageAspectFlags aspectFlags) const noexcept;
         void transitionImageLayout(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
-                                   vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
+                                   vk::ImageLayout oldLayout, vk::ImageLayout newLayout, uint32_t mipLevels);
         void copyBufferToImage(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Buffer& buffer,
                                vk::raii::Image& image, uint32_t width, uint32_t height) noexcept;
         std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer(
@@ -131,6 +133,7 @@ namespace tempest
         vk::raii::Image depthImage{ nullptr };
         vk::raii::DeviceMemory depthImageMemory{ nullptr };
         vk::raii::ImageView depthImageView{ nullptr };
+        uint32_t textureMipmapLevels{ 0 };
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;

@@ -428,7 +428,7 @@ namespace tempest
         for (const auto& image : swapChainImages)
         {
             swapChainImageViews.emplace_back(
-                createImageView(image, swapChainSurfaceFormat.format, vk::ImageAspectFlagBits::eColor));
+                createImageView(image, swapChainSurfaceFormat.format, vk::ImageAspectFlagBits::eColor, 1));
         }
     }
 
@@ -737,6 +737,11 @@ namespace tempest
         {
             throw std::runtime_error("Failed to load texture image");
         }
+
+        // Calculate texture mipmap levels
+        textureMipmapLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+
+
         constexpr auto properties =
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         // Move the image to staging buffer
@@ -752,24 +757,27 @@ namespace tempest
         std::tie(textureImage, textureImageMemory) =
             createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal,
                         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-                        vk::MemoryPropertyFlagBits::eDeviceLocal);
+                        vk::MemoryPropertyFlagBits::eDeviceLocal, textureMipmapLevels);
         vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
         // Transition the image from undefined to transfer optimal layout
         transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eUndefined,
-                              vk::ImageLayout::eTransferDstOptimal);
+                              vk::ImageLayout::eTransferDstOptimal, textureMipmapLevels);
         // Copy the image from staging buffer to textureImage buffer
         copyBufferToImage(commandBuffer, stagingBuffer, textureImage, static_cast<uint32_t>(texWidth),
                           static_cast<uint32_t>(texHeight));
         // Transition to a layout optimal for sampling
         transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eTransferDstOptimal,
-                              vk::ImageLayout::eShaderReadOnlyOptimal);
+                              vk::ImageLayout::eShaderReadOnlyOptimal, textureMipmapLevels);
         // End the command
         endSingleTimeCommands(std::move(commandBuffer));
     }
 
 
     void TempestEngine::createTextureImageView()
-    { textureImageView = createImageView(*textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor); }
+    {
+        textureImageView = createImageView(*textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor,
+                                           textureMipmapLevels);
+    }
 
 
     void TempestEngine::createDepthResources()
@@ -777,20 +785,21 @@ namespace tempest
         const vk::Format format = findDepthFormat();
         std::tie(depthImage, depthImageMemory) =
             createImage(swapChainExtent.width, swapChainExtent.height, format, vk::ImageTiling::eOptimal,
-                        vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        depthImageView = createImageView(depthImage, format, vk::ImageAspectFlagBits::eDepth);
+                        vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal, 1);
+        depthImageView = createImageView(depthImage, format, vk::ImageAspectFlagBits::eDepth, 1);
     }
 
 
     vk::raii::ImageView TempestEngine::createImageView(const vk::Image& image, const vk::Format format,
-                                                       const vk::ImageAspectFlags aspectFlags) const
+                                                       const vk::ImageAspectFlags aspectFlags,
+                                                       const uint32_t mipLevel) const
     {
         const vk::ImageViewCreateInfo viewInfo{ .image            = image,
                                                 .viewType         = vk::ImageViewType::e2D,
                                                 .format           = format,
                                                 .subresourceRange = { .aspectMask     = aspectFlags,
                                                                       .baseMipLevel   = 0,
-                                                                      .levelCount     = 1,
+                                                                      .levelCount     = mipLevel,
                                                                       .baseArrayLayer = 0,
                                                                       .layerCount     = 1 } };
 
@@ -999,12 +1008,13 @@ namespace tempest
 
     std::pair<vk::raii::Image, vk::raii::DeviceMemory> TempestEngine::createImage(
         const uint32_t width, const uint32_t height, const vk::Format format, const vk::ImageTiling tiling,
-        const vk::ImageUsageFlags usage, const vk::MemoryPropertyFlags properties) const noexcept
+        const vk::ImageUsageFlags usage, const vk::MemoryPropertyFlags properties,
+        const uint32_t mipLevels) const noexcept
     {
         const vk::ImageCreateInfo imageInfo{ .imageType   = vk::ImageType::e2D,
                                              .format      = format,
                                              .extent      = { .width = width, .height = height, .depth = 1 },
-                                             .mipLevels   = 1,
+                                             .mipLevels   = mipLevels,
                                              .arrayLayers = 1,
                                              .samples     = vk::SampleCountFlagBits::e1,
                                              .tiling      = tiling,
@@ -1136,19 +1146,20 @@ namespace tempest
     }
 
     void TempestEngine::transitionImageLayout(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
-                                              const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout)
+                                              const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout,
+                                              const uint32_t mipLevels)
     {
         // To transition an image layout, we need to create a pipeline barrier
         // This can be used for transitioning queue families when vk::SharingMode::eExclusive is used.
-        vk::ImageMemoryBarrier barrier{
-            .oldLayout           = oldLayout,
-            .newLayout           = newLayout,
-            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-            .image               = image,
-            // Specify the affect part of the image
-            .subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, .levelCount = 1, .layerCount = 1 }
-        };
+        vk::ImageMemoryBarrier barrier{ .oldLayout           = oldLayout,
+                                        .newLayout           = newLayout,
+                                        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+                                        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+                                        .image               = image,
+                                        // Specify the affect part of the image
+                                        .subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
+                                                              .levelCount = mipLevels,
+                                                              .layerCount = 1 } };
 
         // SrcStage -> PipelineBarrier -> DstStage
 
@@ -1376,7 +1387,6 @@ namespace tempest
 
                 vertices.push_back(vertex);
                 indices.push_back(indices.size());
-
             }
         }
     }
