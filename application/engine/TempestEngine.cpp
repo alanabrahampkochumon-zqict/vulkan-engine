@@ -25,6 +25,8 @@ module;
 #include <vulkan/vulkan_raii.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 module TempestEngine;
 
@@ -84,6 +86,7 @@ namespace tempest
         createCommandPool();
         createCommandBuffer();
         createTextureImage();
+        loadModel();
         createVertexBuffer();
         createIndexBuffer();
         createUniformBuffers();
@@ -629,7 +632,7 @@ namespace tempest
 
     void TempestEngine::createIndexBuffer()
     {
-        constexpr vk::DeviceSize bufferSize = sizeof(indices) * sizeof(indices[0]);
+        const vk::DeviceSize bufferSize = indices.size() * sizeof(indices[0]);
         auto [stagingBuffer, stagingBufferMemory] =
             createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,
                          vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -727,7 +730,7 @@ namespace tempest
     {
         // Read the image
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels          = stbi_load(TEXTURE_PATH, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         vk::DeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels)
@@ -1073,7 +1076,8 @@ namespace tempest
         commandBuffers[frameIndex].bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
         // Bind the vertex buffer
         commandBuffers[frameIndex].bindVertexBuffers(0, *vertexBuffer, { 0 });
-        commandBuffers[frameIndex].bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+        commandBuffers[frameIndex].bindIndexBuffer(*indexBuffer, 0,
+                                                   vk::IndexTypeValue<decltype(indices)::value_type>::value);
         // Set dynamic states
         // NOTE: The negative height is due to the fact the glm has an inverted y axis in the projection matrix.
         commandBuffers[frameIndex].setViewport(0,
@@ -1132,7 +1136,7 @@ namespace tempest
     }
 
     void TempestEngine::transitionImageLayout(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
-                                              const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout) noexcept
+                                              const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout)
     {
         // To transition an image layout, we need to create a pipeline barrier
         // This can be used for transitioning queue families when vk::SharingMode::eExclusive is used.
@@ -1339,5 +1343,41 @@ namespace tempest
         swapChain = nullptr; // Rest will be done by vk::raii dtor
         swapChainImages.clear();
         swapChainImageViews.clear();
+    }
+
+
+    void TempestEngine::loadModel()
+    {
+
+        // Load the object file
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string err;
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH))
+        {
+            throw std::runtime_error(err);
+        }
+
+        // Iterate through its shapes and add it to our vertices and indices
+        for (const auto& [name, mesh] : shapes)
+        {
+            for (const auto& index : mesh.indices)
+            {
+                Vertex vertex{};
+                vertex.pos = {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2],
+                };
+                vertex.texCoord = { attrib.texcoords[2 * index.texcoord_index + 0],
+                                    attrib.texcoords[2 * index.texcoord_index + 1] };
+                vertex.color    = { 1.0f, 1.0f, 1.0f };
+
+                vertices.push_back(vertex);
+                indices.push_back(indices.size());
+
+            }
+        }
     }
 } // namespace tempest

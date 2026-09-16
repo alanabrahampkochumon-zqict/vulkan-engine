@@ -68,9 +68,10 @@ namespace tempest
         // Transition an image layout for rendering, submission etc.
         void transitionImageLayout(vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
                                    vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask,
-                                   vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask, vk::ImageAspectFlags aspectFlags) const noexcept;
+                                   vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask,
+                                   vk::ImageAspectFlags aspectFlags) const noexcept;
         void transitionImageLayout(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
-                                   vk::ImageLayout oldLayout, vk::ImageLayout newLayout) noexcept;
+                                   vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
         void copyBufferToImage(vk::raii::CommandBuffer& commandBuffer, const vk::raii::Buffer& buffer,
                                vk::raii::Image& image, uint32_t width, uint32_t height) noexcept;
         std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer(
@@ -86,6 +87,7 @@ namespace tempest
         [[nodiscard]] vk::Format findDepthFormat() const;
         void recreateSwapChain();
         void cleanupSwapChain();
+        void loadModel();
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -130,6 +132,9 @@ namespace tempest
         vk::raii::DeviceMemory depthImageMemory{ nullptr };
         vk::raii::ImageView depthImageView{ nullptr };
 
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+
         // Fence is required since we don't want to overwrite the currently rendering frame
         std::vector<vk::raii::Fence> drawFences{};
         uint32_t frameIndex = 1;
@@ -138,20 +143,11 @@ namespace tempest
         std::string ENGINE_NAME{ "Tempest" };
         bool _isRunning{ false };
 
-        /// VERTICES
-        const std::vector<Vertex> vertices = {
-            { .pos = { -0.5f, -0.5f, 0.0f }, .color = { 1.0f, 0.0f, 0.0f }, .texCoord = { 0.0f, 0.0f } },
-            { .pos = { 0.5f, -0.5f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f }, .texCoord = { 1.0f, 0.0f } },
-            { .pos = { 0.5f, 0.5f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f }, .texCoord = { 1.0f, 1.0f } },
-            { .pos = { -0.5f, 0.5f, 0.0f }, .color = { 1.0f, 1.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } },
-
-            { .pos = { -0.5f, -0.5f, -0.5f }, .color = { 1.0f, 0.0f, 0.0f }, .texCoord = { 0.0f, 0.0f } },
-            { .pos = { 0.5f, -0.5f, -0.5f }, .color = { 0.0f, 1.0f, 0.0f }, .texCoord = { 1.0f, 0.0f } },
-            { .pos = { 0.5f, 0.5f, -0.5f }, .color = { 0.0f, 0.0f, 1.0f }, .texCoord = { 1.0f, 1.0f } },
-            { .pos = { -0.5f, 0.5f, -0.5f }, .color = { 1.0f, 1.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } }
-        };
-
-        const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4 };
+        /// CONFIG
+        static constexpr uint32_t WIDTH    = 800;
+        static constexpr uint32_t HEIGHT   = 600;
+        static constexpr auto MODEL_PATH   = "models/viking_room.obj";
+        static constexpr auto TEXTURE_PATH = "textures/viking_room.png";
 
 
 #ifdef NDEBUG
