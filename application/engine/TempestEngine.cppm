@@ -3,6 +3,8 @@ module;
 #include <string>
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include "../../out/build/MSVC-Release/_deps/glm-src/glm/ext/scalar_uint_sized.hpp"
+
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
