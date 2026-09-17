@@ -92,6 +92,7 @@ namespace tempest
         createUniformBuffers();
         createDescriptorSetLayout();
         createDescriptorPool();
+        createColorResources();
         createDepthResources();
         createTextureSampler();
         createTextureImageView();
@@ -322,6 +323,7 @@ namespace tempest
             gpus.insert(std::make_pair(score, pd));
         }
 
+        msaaSamples = getMaxUsableSampleCount();
         // If there is a gpu and score is greater than 0 for the last GPU (which gives the GPU with the highest score)
         // use that gpu
         if (!gpus.empty() && gpus.rbegin()->first > 0)
@@ -759,7 +761,7 @@ namespace tempest
             createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal,
                         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc |
                             vk::ImageUsageFlagBits::eSampled,
-                        vk::MemoryPropertyFlagBits::eDeviceLocal, textureMipmapLevels);
+                        vk::MemoryPropertyFlagBits::eDeviceLocal, textureMipmapLevels, vk::SampleCountFlagBits::e1);
         vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
         // Transition the image from undefined to transfer optimal layout
         transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eUndefined,
@@ -786,11 +788,23 @@ namespace tempest
 
     void TempestEngine::createDepthResources()
     {
-        const vk::Format format = findDepthFormat();
-        std::tie(depthImage, depthImageMemory) =
-            createImage(swapChainExtent.width, swapChainExtent.height, format, vk::ImageTiling::eOptimal,
-                        vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal, 1);
+        const vk::Format format                = findDepthFormat();
+        std::tie(depthImage, depthImageMemory) = createImage(
+            swapChainExtent.width, swapChainExtent.height, format, vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal, 1, msaaSamples);
         depthImageView = createImageView(depthImage, format, vk::ImageAspectFlagBits::eDepth, 1);
+    }
+
+
+    void TempestEngine::createColorResources()
+    {
+        vk::Format format = swapChainSurfaceFormat.format;
+
+        std::tie(colorImage, colorImageMemory) =
+            createImage(swapChainExtent.width, swapChainExtent.height, format, vk::ImageTiling::eOptimal,
+                        vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
+                        vk::MemoryPropertyFlagBits::eDeviceLocal, 1, msaaSamples);
+        colorImageView = createImageView(colorImage, format, vk::ImageAspectFlagBits::eColor, 1);
     }
 
 
@@ -1012,8 +1026,8 @@ namespace tempest
 
     std::pair<vk::raii::Image, vk::raii::DeviceMemory> TempestEngine::createImage(
         const uint32_t width, const uint32_t height, const vk::Format format, const vk::ImageTiling tiling,
-        const vk::ImageUsageFlags usage, const vk::MemoryPropertyFlags properties,
-        const uint32_t mipLevels) const noexcept
+        const vk::ImageUsageFlags usage, const vk::MemoryPropertyFlags properties, const uint32_t mipLevels,
+        const vk::SampleCountFlagBits numSamples) const noexcept
     {
         const vk::ImageCreateInfo imageInfo{ .imageType   = vk::ImageType::e2D,
                                              .format      = format,
@@ -1349,6 +1363,7 @@ namespace tempest
         cleanupSwapChain();
         createSwapChain();
         createImageViews();
+        createColorResources();
         createDepthResources();
     }
 
@@ -1470,5 +1485,28 @@ namespace tempest
         barrier.dstAccessMask                 = vk::AccessFlagBits::eShaderRead;
         commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader,
                                       {}, {}, {}, barrier);
+    }
+
+
+    vk::SampleCountFlagBits TempestEngine::getMaxUsableSampleCount() noexcept
+    {
+        const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
+        // Get the sample count for depth and color buffers
+        const vk::SampleCountFlags count =
+            properties.limits.framebufferColorSampleCounts & properties.limits.framebufferDepthSampleCounts;
+        if (count & vk::SampleCountFlagBits::e64)
+            return vk::SampleCountFlagBits::e64;
+        if (count & vk::SampleCountFlagBits::e32)
+            return vk::SampleCountFlagBits::e32;
+        if (count & vk::SampleCountFlagBits::e16)
+            return vk::SampleCountFlagBits::e16;
+        if (count & vk::SampleCountFlagBits::e8)
+            return vk::SampleCountFlagBits::e8;
+        if (count & vk::SampleCountFlagBits::e4)
+            return vk::SampleCountFlagBits::e4;
+        if (count & vk::SampleCountFlagBits::e2)
+            return vk::SampleCountFlagBits::e2;
+        if (count & vk::SampleCountFlagBits::e1)
+            return vk::SampleCountFlagBits::e1;
     }
 } // namespace tempest

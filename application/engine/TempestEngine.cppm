@@ -48,6 +48,7 @@ namespace tempest
         void createTextureImage();
         void createTextureImageView();
         void createDepthResources();
+        void createColorResources();
         vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format, vk::ImageAspectFlags aspectFlags,
                                             uint32_t mipLevel) const;
         [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
@@ -61,11 +62,9 @@ namespace tempest
         void createCommandBuffer() noexcept;
         void createSyncObjects() noexcept;
         void createTextureSampler() noexcept;
-        std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(uint32_t width, uint32_t height,
-                                                                       vk::Format format, vk::ImageTiling tiling,
-                                                                       vk::ImageUsageFlags usage,
-                                                                       vk::MemoryPropertyFlags properties,
-                                                                       uint32_t mipLevels) const noexcept;
+        std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(
+            uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
+            vk::MemoryPropertyFlags properties, uint32_t mipLevels, vk::SampleCountFlagBits numSamples) const noexcept;
         void recordCommandBuffer(uint32_t imageIndex) const noexcept;
         // Transition an image layout for rendering, submission etc.
         void transitionImageLayout(vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
@@ -92,6 +91,7 @@ namespace tempest
         void loadModel();
         void generateMipmaps(const vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
                              vk::Format imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+        vk::SampleCountFlagBits getMaxUsableSampleCount() noexcept;
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -136,6 +136,10 @@ namespace tempest
         vk::raii::DeviceMemory depthImageMemory{ nullptr };
         vk::raii::ImageView depthImageView{ nullptr };
         uint32_t textureMipmapLevels{ 4 };
+        vk::SampleCountFlagBits msaaSamples = vk::SampleCountFlagBits::e1;
+        vk::raii::Image colorImage{ nullptr };
+        vk::raii::DeviceMemory colorImageMemory{ nullptr };
+        vk::raii::ImageView colorImageView{ nullptr };
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
