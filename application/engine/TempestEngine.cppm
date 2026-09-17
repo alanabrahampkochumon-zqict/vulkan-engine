@@ -90,7 +90,8 @@ namespace tempest
         void recreateSwapChain();
         void cleanupSwapChain();
         void loadModel();
-        void generateMipmaps(vk::raii::CommandBuffer& commandBuffer, vk::raii::Image& image, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+        void generateMipmaps(const vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
+                             vk::Format imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
 
         std::string appName{}, appVersion{}, appId{};
@@ -134,7 +135,7 @@ namespace tempest
         vk::raii::Image depthImage{ nullptr };
         vk::raii::DeviceMemory depthImageMemory{ nullptr };
         vk::raii::ImageView depthImageView{ nullptr };
-        uint32_t textureMipmapLevels{ 0 };
+        uint32_t textureMipmapLevels{ 4 };
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;

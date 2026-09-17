@@ -768,7 +768,8 @@ namespace tempest
         copyBufferToImage(commandBuffer, stagingBuffer, textureImage, static_cast<uint32_t>(texWidth),
                           static_cast<uint32_t>(texHeight));
         // Transition to a layout optimal for sampling(while generating mipmaps)
-        generateMipmaps(commandBuffer, textureImage, texWidth, texHeight, textureMipmapLevels);
+        generateMipmaps(commandBuffer, textureImage, vk::Format::eR8G8B8A8Srgb, texWidth, texHeight,
+                        textureMipmapLevels);
         // transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eTransferDstOptimal,
         //                       vk::ImageLayout::eShaderReadOnlyOptimal, textureMipmapLevels);
         // End the command
@@ -989,21 +990,21 @@ namespace tempest
                                            .addressModeU = vk::SamplerAddressMode::eRepeat,
                                            .addressModeV = vk::SamplerAddressMode::eRepeat,
                                            .addressModeW = vk::SamplerAddressMode::eRepeat,
+                                           .mipLodBias   = 0.0f,
                                            // Anisotropic filtering
                                            .anisotropyEnable = vk::True,
                                            .maxAnisotropy    = properties.limits.maxSamplerAnisotropy,
                                            // If comparison is enabled then texels will be compared to a value.
                                            .compareEnable = vk::True,
-                                           .compareOp     = vk::CompareOp::eAlways };
+                                           .compareOp     = vk::CompareOp::eAlways,
+                                           .minLod        = 0.0f,
+                                           .maxLod        = vk::LodClampNone };
         // What color to use beyond the clamp. Cannot specify an arbitrary color.
         samplerInfo.borderColor = vk::BorderColor::eFloatOpaqueBlack;
         // Unnormalized coordinates allows us to sample beyond the [0,1) range.
         samplerInfo.unnormalizedCoordinates = vk::False;
         // Map mapping
         samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
-        samplerInfo.mipLodBias = 0.0f;
-        samplerInfo.minLod     = 0.0f;
-        samplerInfo.maxLod     = 0.0f;
 
         textureSampler = vk::raii::Sampler(device, samplerInfo);
     }
@@ -1402,9 +1403,18 @@ namespace tempest
     }
 
 
-    void TempestEngine::generateMipmaps(vk::raii::CommandBuffer& commandBuffer, vk::raii::Image& image,
-                                        const int32_t texWidth, const int32_t texHeight, const uint32_t mipLevels)
+    void TempestEngine::generateMipmaps(const vk::raii::CommandBuffer& commandBuffer, const vk::raii::Image& image,
+                                        const vk::Format imageFormat, const int32_t texWidth, const int32_t texHeight,
+                                        const uint32_t mipLevels)
     {
+
+        // Check for bit image platform support
+        const auto formatProperties = physicalDevice.getFormatProperties(imageFormat);
+        if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear))
+        {
+            throw std::runtime_error("texture image format doesn't support linear blitting");
+        }
+
         vk::ImageMemoryBarrier barrier = {
             .srcAccessMask       = vk::AccessFlagBits::eTransferWrite,
             .dstAccessMask       = vk::AccessFlagBits::eTransferRead,
