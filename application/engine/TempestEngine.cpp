@@ -754,9 +754,11 @@ namespace tempest
         // Free the image buffer
         stbi_image_free(pixels);
 
+        // When generating mipmaps we need the image to a transfer, so we add transfer dst, src, and sample flags.
         std::tie(textureImage, textureImageMemory) =
             createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal,
-                        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+                        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc |
+                            vk::ImageUsageFlagBits::eSampled,
                         vk::MemoryPropertyFlagBits::eDeviceLocal, textureMipmapLevels);
         vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
         // Transition the image from undefined to transfer optimal layout
@@ -765,9 +767,10 @@ namespace tempest
         // Copy the image from staging buffer to textureImage buffer
         copyBufferToImage(commandBuffer, stagingBuffer, textureImage, static_cast<uint32_t>(texWidth),
                           static_cast<uint32_t>(texHeight));
-        // Transition to a layout optimal for sampling
-        transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eTransferDstOptimal,
-                              vk::ImageLayout::eShaderReadOnlyOptimal, textureMipmapLevels);
+        // Transition to a layout optimal for sampling(while generating mipmaps)
+        generateMipmaps(commandBuffer, textureImage, texWidth, texHeight, textureMipmapLevels);
+        // transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eTransferDstOptimal,
+        //                       vk::ImageLayout::eShaderReadOnlyOptimal, textureMipmapLevels);
         // End the command
         endSingleTimeCommands(std::move(commandBuffer));
     }
@@ -1396,5 +1399,66 @@ namespace tempest
                 indices.push_back(it->second);
             }
         }
+    }
+
+
+    void TempestEngine::generateMipmaps(vk::raii::CommandBuffer& commandBuffer, vk::raii::Image& image,
+                                        const int32_t texWidth, const int32_t texHeight, const uint32_t mipLevels)
+    {
+        vk::ImageMemoryBarrier barrier = {
+            .srcAccessMask       = vk::AccessFlagBits::eTransferWrite,
+            .dstAccessMask       = vk::AccessFlagBits::eTransferRead,
+            .oldLayout           = vk::ImageLayout::eTransferDstOptimal,
+            .newLayout           = vk::ImageLayout::eTransferSrcOptimal,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .image               = image,
+            .subresourceRange    = { .aspectMask = vk::ImageAspectFlagBits::eColor, .levelCount = 1, .layerCount = 1 }
+        };
+
+        int32_t mipWidth = texWidth, mipHeight = texHeight;
+
+        for (uint32_t i = 1; i < mipLevels; ++i)
+        {
+            // Transfer the barrier to transfer optimal layout
+            barrier.subresourceRange.baseMipLevel = i - 1;
+            barrier.srcAccessMask                 = vk::AccessFlagBits::eTransferWrite;
+            barrier.dstAccessMask                 = vk::AccessFlagBits::eTransferRead;
+            barrier.oldLayout                     = vk::ImageLayout::eTransferDstOptimal;
+            barrier.newLayout                     = vk::ImageLayout::eTransferSrcOptimal;
+            commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer,
+                                          {}, {}, {}, barrier);
+
+            // We need specify that we need to blit from mipmap level i-1 to i with half width and height
+            vk::ImageBlit blit = {
+                .srcSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = i - 1, .layerCount = 1 },
+                .srcOffsets     = std::array<vk::Offset3D, 2>({ {}, { mipWidth, mipHeight, 1 } }),
+                .dstSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = i, .layerCount = 1 },
+                .dstOffsets     = std::array<vk::Offset3D, 2>(
+                    { {}, { 1 < mipWidth ? mipWidth / 2 : 1, 1 < mipHeight ? mipHeight / 2 : 1, 1 } })
+            };
+            // Record the blit command
+            commandBuffer.blitImage(image, vk::ImageLayout::eTransferSrcOptimal, image,
+                                    vk::ImageLayout::eTransferDstOptimal, blit, vk::Filter::eLinear);
+            // Transition the image layout to enable sampling
+            barrier.oldLayout     = vk::ImageLayout::eTransferSrcOptimal;
+            barrier.newLayout     = vk::ImageLayout::eShaderReadOnlyOptimal;
+            barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+            commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                          vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, barrier);
+            // Update the mip width for next mipmap generation
+            mipWidth  = mipWidth > 1 ? mipWidth / 2 : 1;
+            mipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+        }
+
+        // Transition last mipmap to eShaderReadonly optimal
+        barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+        barrier.oldLayout                     = vk::ImageLayout::eTransferDstOptimal;
+        barrier.newLayout                     = vk::ImageLayout::eShaderReadOnlyOptimal;
+        barrier.srcAccessMask                 = vk::AccessFlagBits::eTransferWrite;
+        barrier.dstAccessMask                 = vk::AccessFlagBits::eShaderRead;
+        commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader,
+                                      {}, {}, {}, barrier);
     }
 } // namespace tempest

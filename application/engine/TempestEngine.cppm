@@ -90,6 +90,7 @@ namespace tempest
         void recreateSwapChain();
         void cleanupSwapChain();
         void loadModel();
+        void generateMipmaps(vk::raii::CommandBuffer& commandBuffer, vk::raii::Image& image, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
 
         std::string appName{}, appVersion{}, appId{};
