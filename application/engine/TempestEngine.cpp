@@ -364,10 +364,10 @@ namespace tempest
         vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
                            vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
             featureChain = {
-                { .features = { .samplerAnisotropy = true } },          // Physical Device Features
-                { .shaderDrawParameters = true },                       // Vulkan 1.1 features
-                { .synchronization2 = true, .dynamicRendering = true }, // Vulkan 1.3 features
-                { .extendedDynamicState = true }                        // Dynamic state
+                { .features = { .sampleRateShading = true, .samplerAnisotropy = true } }, // Physical Device Features
+                { .shaderDrawParameters = true },                                         // Vulkan 1.1 features
+                { .synchronization2 = true, .dynamicRendering = true },                   // Vulkan 1.3 features
+                { .extendedDynamicState = true }                                          // Dynamic state
             };
 
         std::vector requiredDeviceExtensions{ vk::KHRSwapchainExtensionName };
@@ -533,7 +533,8 @@ namespace tempest
         };
 
         // Multisampling
-        vk::PipelineMultisampleStateCreateInfo multisampling{ .rasterizationSamples = msaaSamples };
+        // Enable sample shading
+        vk::PipelineMultisampleStateCreateInfo multisampling{ .rasterizationSamples = msaaSamples, .sampleShadingEnable = vk::True, .minSampleShading = 0.2f };
 
         // Depth and stencil tests
         // Unused right now
