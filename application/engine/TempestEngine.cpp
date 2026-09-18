@@ -322,14 +322,13 @@ namespace tempest
 
             gpus.insert(std::make_pair(score, pd));
         }
-
-        msaaSamples = getMaxUsableSampleCount();
         // If there is a gpu and score is greater than 0 for the last GPU (which gives the GPU with the highest score)
         // use that gpu
         if (!gpus.empty() && gpus.rbegin()->first > 0)
             physicalDevice = gpus.rbegin()->second;
         else
             throw std::runtime_error("No appropriate graphics card found!");
+        msaaSamples = getMaxUsableSampleCount();
     }
 
 
@@ -534,9 +533,7 @@ namespace tempest
         };
 
         // Multisampling
-        // Disabled for now.
-        vk::PipelineMultisampleStateCreateInfo multisampling{ .rasterizationSamples = vk::SampleCountFlagBits::e1,
-                                                              .sampleShadingEnable  = vk::False };
+        vk::PipelineMultisampleStateCreateInfo multisampling{ .rasterizationSamples = msaaSamples };
 
         // Depth and stencil tests
         // Unused right now
@@ -1034,7 +1031,7 @@ namespace tempest
                                              .extent      = { .width = width, .height = height, .depth = 1 },
                                              .mipLevels   = mipLevels,
                                              .arrayLayers = 1,
-                                             .samples     = vk::SampleCountFlagBits::e1,
+                                             .samples     = numSamples,
                                              .tiling      = tiling,
                                              .usage       = usage,
                                              .sharingMode = vk::SharingMode::eExclusive };
@@ -1073,16 +1070,26 @@ namespace tempest
             vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
             vk::ImageAspectFlagBits::eDepth);
 
+        const auto image = *colorImage;
+        // Transition the multisampled image
+        transitionImageLayout(*colorImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+                              vk::AccessFlagBits2::eColorAttachmentWrite, vk::AccessFlagBits2::eColorAttachmentWrite,
+                              vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                              vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::ImageAspectFlagBits::eColor);
+
         constexpr vk::ClearColorValue clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
         constexpr vk::ClearDepthStencilValue clearDepth{ .depth = 1.0f, .stencil = 0 };
 
         // Dynamic rendering doesn't require a RenderPass but we need to specify the attachment info
         vk::RenderingAttachmentInfo attachmentInfo{
-            .imageView   = swapChainImageViews[imageIndex],
-            .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .loadOp      = vk::AttachmentLoadOp::eClear,  // What to do to the attachment before rendering
-            .storeOp     = vk::AttachmentStoreOp::eStore, // What to do to the attachment after rendering
-            .clearValue  = clearColor
+            .imageView          = colorImageView,
+            .imageLayout        = vk::ImageLayout::eColorAttachmentOptimal,
+            .resolveMode        = vk::ResolveModeFlagBits::eAverage,
+            .resolveImageView   = swapChainImageViews[imageIndex],
+            .resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .loadOp             = vk::AttachmentLoadOp::eClear,  // What to do to the attachment before rendering
+            .storeOp            = vk::AttachmentStoreOp::eStore, // What to do to the attachment after rendering
+            .clearValue         = clearColor
         };
 
         vk::RenderingAttachmentInfo depthAttachmentInfo{ .imageView   = depthImageView,
