@@ -1,5 +1,4 @@
-add_library(TempestEngine OBJECT
-        )
+add_library(TempestEngine OBJECT)
 
 target_compile_features(TempestEngine PUBLIC cxx_std_23)
 
@@ -8,6 +7,11 @@ target_sources(
         PRIVATE
         TempestEngine.cpp
         GEWindow.cpp
+        renderer/DescriptorSet.cpp
+        renderer/Images.cpp
+        renderer/RendererContext.cpp
+        renderer/SwapChain.cpp
+
         ${vulkanhpp_SOURCE_DIR}
 
         PUBLIC
@@ -17,6 +21,11 @@ target_sources(
         GEWindow.cppm
         Vertex.cppm
         UniformBufferObject.cppm
+
+        renderer/DescriptorSet.cppm
+        renderer/Images.cppm
+        renderer/RendererContext.cppm
+        renderer/SwapChain.cppm
 
         PUBLIC
         FILE_SET HEADERS
