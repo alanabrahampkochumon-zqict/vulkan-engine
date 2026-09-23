@@ -1,16 +1,14 @@
-add_library(TempestEngine OBJECT)
+add_library(TempestEngine STATIC)
 
 target_compile_features(TempestEngine PUBLIC cxx_std_23)
+
+add_subdirectory(platform)
 
 target_sources(
         TempestEngine
         PRIVATE
         TempestEngine.cpp
-        GEWindow.cpp
-        renderer/DescriptorSet.cpp
-        renderer/Images.cpp
-        renderer/RendererContext.cpp
-        renderer/SwapChain.cpp
+        Application.cpp
 
         ${vulkanhpp_SOURCE_DIR}
 
@@ -18,24 +16,22 @@ target_sources(
         FILE_SET CXX_MODULES
         FILES
         TempestEngine.cppm
-        GEWindow.cppm
         Vertex.cppm
         UniformBufferObject.cppm
-
-        renderer/DescriptorSet.cppm
-        renderer/Images.cppm
-        renderer/RendererContext.cppm
-        renderer/SwapChain.cppm
 
         PUBLIC
         FILE_SET HEADERS
         FILES
         FileReader.h
+        Application.h
 )
 
 
 target_link_libraries(
         TempestEngine PRIVATE
+
+        # Object Linkage
+        TempestPlatform
 
         # StrictWarnings
         SDL3::SDL3-static

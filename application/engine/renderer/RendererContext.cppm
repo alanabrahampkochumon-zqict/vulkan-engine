@@ -46,6 +46,8 @@ namespace tempest
         vk::raii::PhysicalDevice _selectedGPU{ nullptr };
         vk::raii::Device _logicalDevice{ nullptr };
         vk::raii::Queue _graphicsQueue{ nullptr };
+        uint32_t queueIndex = ~0; // 0b11111...
+        vk::raii::SurfaceKHR _surface{ nullptr };
 
         std::function<void(std::string)> _log;
 

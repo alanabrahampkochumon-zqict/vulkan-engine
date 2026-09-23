@@ -1,6 +1,5 @@
 add_executable(
         GameEngine
-
         Main.cpp
 )
 target_compile_features(GameEngine PUBLIC cxx_std_23)
@@ -20,6 +19,7 @@ target_link_libraries(
         #        ${Vulkan_LIBRARIES}
 
         TempestEngine
+        TempestPlatform
 )
 
 set(SHADER_SOURCES basic.slang)

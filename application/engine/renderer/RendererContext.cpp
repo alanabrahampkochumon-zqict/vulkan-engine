@@ -203,51 +203,51 @@ namespace tempest
     { /// Request a device with graphics family queue
         /// and vulkan 1.1 shaderDrawparams, dynamic rendering and extended dynamic state
         /// Enable swap chain extension
-        // auto queueProperties = _selectedGPU.getQueueFamilyProperties();
-        //
-        // // Iterate through each queue and find the first one that supports both graphics and presentation
-        // for (uint32_t qFamilyIndex = 0; qFamilyIndex < queueProperties.size(); ++qFamilyIndex)
-        // {
-        //     if (queueProperties[qFamilyIndex].queueFlags & vk::QueueFlagBits::eGraphics &&
-        //         _selectedGPU.getSurfaceSupportKHR(qFamilyIndex, *surface))
-        //     {
-        //         queueIndex = qFamilyIndex;
-        //         break;
-        //     }
-        // }
-        // if (queueIndex == ~0)
-        //     throw std::runtime_error("Couldn't find a queue supporting both graphics and presentation");
-        //
-        // // We need to specify a priority even if we have only 1 queue
-        // float queuePriority = 0.5f;
-        // vk::DeviceQueueCreateInfo deviceQueueCreateInfo{ .queueFamilyIndex = queueIndex,
-        //                                                  .queueCount       = 1,
-        //                                                  .pQueuePriorities = &queuePriority };
-        //
-        //
-        // /// Vulkan Feature request chain
-        // /// Combine all the features required into a single struct without using pNext
-        // vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
-        //                    vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
-        //     featureChain = {
-        //         { .features = { .sampleRateShading = true, .samplerAnisotropy = true } }, // Physical Device Features
-        //         { .shaderDrawParameters = true },                                         // Vulkan 1.1 features
-        //         { .synchronization2 = true, .dynamicRendering = true },                   // Vulkan 1.3 features
-        //         { .extendedDynamicState = true }                                          // Dynamic state
-        //     };
-        //
-        // std::vector requiredDeviceExtensions{ vk::KHRSwapchainExtensionName };
-        // vk::DeviceCreateInfo deviceCreateInfo{ .pNext                = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
-        //                                        .queueCreateInfoCount = 1,
-        //                                        .pQueueCreateInfos    = &deviceQueueCreateInfo,
-        //                                        .enabledExtensionCount =
-        //                                            static_cast<uint32_t>(requiredDeviceExtensions.size()),
-        //                                        .ppEnabledExtensionNames = requiredDeviceExtensions.data() };
-        //
-        // device = vk::raii::Device(physicalDevice, deviceCreateInfo);
-        //
-        // // Queue is automatically created with logical device
-        // graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
+        auto queueProperties = _selectedGPU.getQueueFamilyProperties();
+
+        // Iterate through each queue and find the first one that supports both graphics and presentation
+        for (uint32_t qFamilyIndex = 0; qFamilyIndex < queueProperties.size(); ++qFamilyIndex)
+        {
+            if (queueProperties[qFamilyIndex].queueFlags & vk::QueueFlagBits::eGraphics &&
+                _selectedGPU.getSurfaceSupportKHR(qFamilyIndex, *_surface))
+            {
+                queueIndex = qFamilyIndex;
+                break;
+            }
+        }
+        if (queueIndex == ~0)
+            throw std::runtime_error("Couldn't find a queue supporting both graphics and presentation");
+
+        // We need to specify a priority even if we have only 1 queue
+        float queuePriority = 0.5f;
+        vk::DeviceQueueCreateInfo deviceQueueCreateInfo{ .queueFamilyIndex = queueIndex,
+                                                         .queueCount       = 1,
+                                                         .pQueuePriorities = &queuePriority };
+
+
+        /// Vulkan Feature request chain
+        /// Combine all the features required into a single struct without using pNext
+        vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
+                           vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
+            featureChain = {
+                { .features = { .sampleRateShading = true, .samplerAnisotropy = true } }, // Physical Device Features
+                { .shaderDrawParameters = true },                                         // Vulkan 1.1 features
+                { .synchronization2 = true, .dynamicRendering = true },                   // Vulkan 1.3 features
+                { .extendedDynamicState = true }                                          // Dynamic state
+            };
+
+        std::vector requiredDeviceExtensions{ vk::KHRSwapchainExtensionName };
+        vk::DeviceCreateInfo deviceCreateInfo{ .pNext                = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+                                               .queueCreateInfoCount = 1,
+                                               .pQueueCreateInfos    = &deviceQueueCreateInfo,
+                                               .enabledExtensionCount =
+                                                   static_cast<uint32_t>(requiredDeviceExtensions.size()),
+                                               .ppEnabledExtensionNames = requiredDeviceExtensions.data() };
+
+        _logicalDevice = vk::raii::Device(_selectedGPU, deviceCreateInfo);
+
+        // Queue is automatically created with logical device
+        _graphicsQueue = vk::raii::Queue(_logicalDevice, queueIndex, 0);
     }
 
 
