@@ -22,8 +22,14 @@ namespace tempest::platform
 
         ~TempestWindow() noexcept;
 
+        TempestWindow(const TempestWindow& other)            = delete;
+        TempestWindow& operator=(const TempestWindow& other) = delete;
 
+        TempestWindow(TempestWindow&& other) noexcept;
 
+        TempestWindow& operator=(TempestWindow&& other) noexcept;
+
+        
         [[nodiscard]] constexpr size_t getWidth() const noexcept { return _width; }
         [[nodiscard]] constexpr size_t getHeight() const noexcept { return _height; }
         [[nodiscard]] constexpr std::string_view getWindowName() const noexcept { return _name; }

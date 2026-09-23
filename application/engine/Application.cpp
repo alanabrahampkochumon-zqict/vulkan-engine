@@ -16,7 +16,9 @@ namespace tempest
 {
 
     TempestApp::TempestApp(std::string name) noexcept
-        : _window{ INIT_WIDTH, INIT_HEIGHT, std::move(name) }, _isRunning(true) // TODO: Update to an init
+        : _window{ INIT_WIDTH, INIT_HEIGHT, std::move(name) },
+          _renderPipeline{ "shaders/slang.spv", "shaders/slang.spv" },
+          _isRunning(true) // TODO: Update to an init
     {
         // TODO: Move to init
         if (!_window.initWindow())

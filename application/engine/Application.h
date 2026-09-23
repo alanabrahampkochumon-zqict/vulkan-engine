@@ -10,6 +10,7 @@
  */
 
 #include "platform/Window.h"
+#include "renderer/RenderPipeline.h"
 
 namespace tempest
 {
@@ -27,6 +28,7 @@ namespace tempest
 
     private:
         TempestWindow _window;
+        renderer::RenderPipeline _renderPipeline;
         bool _isRunning;
 
         void handleEvents() noexcept;

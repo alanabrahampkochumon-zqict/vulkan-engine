@@ -32,10 +32,28 @@ namespace tempest::platform
     }
 
 
+    TempestWindow::TempestWindow(TempestWindow&& other) noexcept
+        : _window(other._window), _width(other._width), _height(other._height)
+    {}
+
+
+    TempestWindow& TempestWindow::operator=(TempestWindow&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+        _window = other._window;
+        _width  = other._width;
+        _height = other._height;
+
+        return *this;
+    }
+
+
     TempestWindow::~TempestWindow() noexcept
     {
         SDL_DestroyWindow(_window);
         SDL_Quit();
     }
+
 
 } // namespace tempest::platform

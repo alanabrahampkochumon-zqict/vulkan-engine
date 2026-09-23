@@ -3,6 +3,7 @@ add_library(TempestEngine STATIC)
 target_compile_features(TempestEngine PUBLIC cxx_std_23)
 
 add_subdirectory(platform)
+add_subdirectory(renderer)
 
 target_sources(
         TempestEngine
@@ -32,6 +33,7 @@ target_link_libraries(
 
         # Object Linkage
         TempestPlatform
+        TempestRenderer
 
         # StrictWarnings
         SDL3::SDL3-static
