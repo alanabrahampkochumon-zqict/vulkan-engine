@@ -21,6 +21,7 @@ namespace tempest::platform
         if (!createSurface(window, instance))
         {
             std::cout << "There was an error creating a vulkan surface!\n";
+            return;
         }
     }
 

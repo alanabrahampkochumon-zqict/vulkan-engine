@@ -105,19 +105,24 @@ namespace tempest
         vk::raii::Instance instance{ nullptr };
         std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
         vk::DebugUtilsMessengerEXT debugMessenger{};
+
         vk::raii::PhysicalDevice physicalDevice{ nullptr };
         vk::raii::Device device{ nullptr };
         vk::raii::Queue graphicsQueue{ nullptr };
         vk::PhysicalDeviceFeatures deviceFeatures{};
+
         vk::raii::SurfaceKHR surface{ nullptr };
+
         vk::raii::SwapchainKHR swapChain{ nullptr };
         std::vector<vk::Image> swapChainImages{};
         std::vector<vk::raii::ImageView> swapChainImageViews{};
         vk::Extent2D swapChainExtent;
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
+
         vk::raii::DescriptorSetLayout descriptorSetLayout{ nullptr };
         vk::raii::PipelineLayout pipelineLayout{ nullptr };
         vk::raii::Pipeline graphicsPipeline{ nullptr };
+
         vk::raii::CommandPool commandPool{ nullptr };
         vk::raii::Buffer vertexBuffer{ nullptr }, indexBuffer{ nullptr };
         vk::raii::DeviceMemory vertexBufferMemory{ nullptr }, indexBufferMemory{ nullptr };
