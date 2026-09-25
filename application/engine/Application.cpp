@@ -10,6 +10,9 @@
 
 #include "Application.h"
 
+#include "utils/Logger.h"
+
+#include <SDL3/SDL.h>
 #include <iostream>
 
 namespace tempest
@@ -21,6 +24,7 @@ namespace tempest
           _isRunning(true) // TODO: Update to an init
     {
         // TODO: Move to init
+        log::init();// TODO: Move to an init
         if (!_window.initWindow())
         {
             std::cout << "There was an error initializing the window!\n";
@@ -30,7 +34,7 @@ namespace tempest
 
     void TempestApp::run() noexcept
     {
-        std::cout << "App is running..." << '\n';
+        log::info("App is running...");
         while (_isRunning)
         {
             handleEvents();

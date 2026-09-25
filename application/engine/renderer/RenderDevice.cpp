@@ -11,6 +11,8 @@
 
 #include "RenderDevice.h"
 
+#include "../utils/Logger.h"
+
 #include <map>
 
 namespace tempest::renderer
@@ -28,8 +30,7 @@ namespace tempest::renderer
 
         if (physicalDevices.empty())
         {
-            // "No Graphics card supporting vulkan found!"
-            return false;
+            log::error("No Graphics card supporting vulkan found!");
         }
 
         std::multimap<uint32_t, vk::raii::PhysicalDevice> gpus;
@@ -91,9 +92,11 @@ namespace tempest::renderer
         if (!gpus.empty() && gpus.rbegin()->first > 0)
         {
             _physicalDevice = gpus.rbegin()->second;
+            _features       = _physicalDevice.getFeatures();
             return true;
         }
-        _features = _physicalDevice.getFeatures();
+
+        log::error("An error occurred while picking the physical device.");
         return false;
     }
 
@@ -189,7 +192,10 @@ namespace tempest::renderer
         {
             queue.queue = vk::raii::Queue(_device, queue.familyIndex, 0);
             if (queue.queue == nullptr)
+            {
+                log::error("Couldn't create a render queue! Please check for graphics support.");
                 return false;
+            }
         }
         return true;
     }

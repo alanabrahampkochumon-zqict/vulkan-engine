@@ -9,20 +9,20 @@
  * @copyright Copyright (c) 2026 Alan Abraham P Kochumon
  */
 
-#include <SDL3/SDL.h>
 #include <vulkan/vulkan_raii.hpp>
+#include "Window.h"
 
 namespace tempest::platform
 {
     class TempestSurface
     {
     public:
-        TempestSurface(SDL_Window& window, const vk::raii::Instance& instance) noexcept;
+        TempestSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept;
 
         const vk::raii::SurfaceKHR& getSurface() const noexcept { return _vulkanSurface; }
 
     protected:
-        bool createSurface(SDL_Window& window, const vk::raii::Instance& instance) noexcept;
+        bool createSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept;
 
     private:
         vk::raii::SurfaceKHR _vulkanSurface;

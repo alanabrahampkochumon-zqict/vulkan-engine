@@ -11,6 +11,7 @@
 #include "GraphicsContext.h"
 
 #include "../platform/Window.h"
+#include "../utils/Logger.h"
 
 namespace tempest::renderer
 {
@@ -41,15 +42,28 @@ namespace tempest::renderer
     }
 
 
-    vk::Bool32 GraphicsContext::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
-                                              vk::DebugUtilsMessageTypeFlagsEXT type,
+    vk::Bool32 GraphicsContext::debugCallback(const vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+                                              const vk::DebugUtilsMessageTypeFlagsEXT type,
                                               const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                              void* pUserData)
+                                              [[maybe_unused]] void* pUserData)
     {
-        // TODO:
-
+        const auto message =
+            std::format("Validation Layer(type: {})\nMessage:\n{}\n", vk::to_string(type), pCallbackData->pMessage);
+        if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+        {
+            log::error(message.c_str());
+        }
+        else if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+        {
+            log::warn(message.c_str());
+        }
+        else
+        {
+            log::info(message.c_str());
+        }
         return vk::False;
     }
+
 
     bool GraphicsContext::createVulkanInstance(const std::string& applicationName, const uint32_t appVersion,
                                                const std::string& engineName, const uint32_t engineVersion,
@@ -76,6 +90,7 @@ namespace tempest::renderer
             });
         if (unsupportedPropertiesIt != requiredExtensions.end())
         {
+            log::error("Required extension(s) not supported!");
             return false;
         }
 
@@ -100,6 +115,7 @@ namespace tempest::renderer
 
         if (unsupportedLayers != requiredLayers.end())
         {
+            log::error("Required layer(s) not supported!");
             return false;
         }
 
@@ -124,7 +140,7 @@ namespace tempest::renderer
     {
         if (!_enableValidationLayers)
             return;
-
+        log::info("Vulkan validation layers enabled!");
         constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags{
             vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
         };

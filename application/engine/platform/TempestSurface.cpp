@@ -10,31 +10,32 @@
 
 #include "TempestSurface.h"
 
+#include "../utils/Logger.h"
+
 #include <SDL3/SDL_vulkan.h>
-#include <iostream>
 
 namespace tempest::platform
 {
-    TempestSurface::TempestSurface(SDL_Window& window, const vk::raii::Instance& instance) noexcept
+    TempestSurface::TempestSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept
         : _vulkanSurface(nullptr)
     {
         if (!createSurface(window, instance))
         {
-            std::cout << "There was an error creating a vulkan surface!\n";
+            log::error("There was an error creating vulkan surface!");
             return;
         }
     }
 
 
-    bool TempestSurface::createSurface(SDL_Window& window, const vk::raii::Instance& instance) noexcept
+    bool TempestSurface::createSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept
     {
         VkSurfaceKHR surface;
-        if (!SDL_Vulkan_CreateSurface(&window, *instance, nullptr, &surface))
+        if (!SDL_Vulkan_CreateSurface(window.getCoreWindow(), *instance, nullptr, &surface))
         {
             return false;
         }
         _vulkanSurface = vk::raii::SurfaceKHR(instance, surface);
-        return true;
+        return _vulkanSurface != nullptr;
     }
 
 

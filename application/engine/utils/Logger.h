@@ -10,6 +10,7 @@
  */
 
 #include <string>
+#include <format>
 
 namespace tempest::log
 {

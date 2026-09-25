@@ -10,7 +10,10 @@
 
 #include "Window.h"
 
+#include "../utils/Logger.h"
+
 #include <SDL3/SDL_vulkan.h>
+#include <SDL3/SDL.h>
 
 namespace tempest::platform
 {
@@ -20,14 +23,19 @@ namespace tempest::platform
 
     bool TempestWindow::initWindow() noexcept
     {
-        // TODO: Add logger
         if (!SDL_Init(SDL_INIT_VIDEO))
+        {
+            log::error("There was an error instantiation SDL!");
             return false;
+        }
 
         _window = SDL_CreateWindow(_name.c_str(), _width, _height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
         if (!_window)
+        {
+            log::error("There was an error creating the SDL window!");
             return false;
+        }
 
         return true;
     }
@@ -50,9 +58,7 @@ namespace tempest::platform
     }
 
     char const* const* TempestWindow::getRequiredExtensions(uint32_t& count) noexcept
-    {
-        return SDL_Vulkan_GetInstanceExtensions(&count);
-    }
+    { return SDL_Vulkan_GetInstanceExtensions(&count); }
 
 
 

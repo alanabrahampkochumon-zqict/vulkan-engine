@@ -11,9 +11,9 @@
 #include "RenderPipeline.h"
 
 #include "../utils/FileReader.h"
+#include "../utils/Logger.h"
 
 #include <iostream>
-
 
 namespace tempest::renderer
 {
@@ -29,8 +29,8 @@ namespace tempest::renderer
         const auto vertFile = readFile(vertFilePath);
         const auto fragFile = readFile(fragFilePath);
 
-        std::cout << "Vertex: " << vertFile.size() << '\n';
-        std::cout << "Fragment: " << fragFile.size() << '\n';
+        log::info(std::format("Vertex: {}\n", vertFile.size()).c_str());
+        log::info(std::format("Fragment: {}\n", fragFile.size()).c_str());
     }
 
 
