@@ -34,6 +34,9 @@ namespace tempest::platform
         [[nodiscard]] constexpr size_t getHeight() const noexcept { return _height; }
         [[nodiscard]] constexpr std::string_view getWindowName() const noexcept { return _name; }
 
+
+        static char const* const* getRequiredExtensions(uint32_t& count) noexcept;
+
     private:
         SDL_Window* _window;
         size_t _width, _height;

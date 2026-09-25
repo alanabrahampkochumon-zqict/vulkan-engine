@@ -10,6 +10,7 @@
 
 #include "Window.h"
 
+#include <SDL3/SDL_vulkan.h>
 
 namespace tempest::platform
 {
@@ -47,6 +48,12 @@ namespace tempest::platform
 
         return *this;
     }
+
+    char const* const* TempestWindow::getRequiredExtensions(uint32_t& count) noexcept
+    {
+        return SDL_Vulkan_GetInstanceExtensions(&count);
+    }
+
 
 
     TempestWindow::~TempestWindow() noexcept
