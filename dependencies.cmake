@@ -87,6 +87,15 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
 )
 
+message(STATUS "Downloading and including Quill")
+FetchContent_Declare(
+        quill
+        GIT_REPOSITORY https://github.com/odygrd/quill.git
+        GIT_TAG v13.0.0
+        GIT_PROGRESS TRUE
+)
+
+
 # vulkanhpp does not have a proper CMakeLists
 # FetchContent_GetProperties(VulkanHPP)
 # FetchContent_Populate(VulkanHPP)
@@ -100,6 +109,7 @@ FetchContent_MakeAvailable(sdl3)
 FetchContent_MakeAvailable(glm)
 FetchContent_MakeAvailable(stb)
 FetchContent_MakeAvailable(tinyobj)
+FetchContent_MakeAvailable(quill)
 
 add_library(stb INTERFACE
         ${stb_SOURCE_DIR}/stb_image.h

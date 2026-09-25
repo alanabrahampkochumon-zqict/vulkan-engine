@@ -4,6 +4,7 @@ target_compile_features(TempestEngine PUBLIC cxx_std_23)
 
 add_subdirectory(platform)
 add_subdirectory(renderer)
+add_subdirectory(utils)
 
 target_sources(
         TempestEngine
@@ -34,10 +35,11 @@ target_link_libraries(
         # Object Linkage
         TempestPlatform
         TempestRenderer
+        TempestUtils
 
         # StrictWarnings
-        SDL3::SDL3-static
-        Vulkan::Headers
+        SDL3::SDL3-static # TODO: REMOVE
+        Vulkan::Headers # TODO: REMOVE
         glm::glm # TODO: Replace with Falcon
         std::stb
         tinyobjloader

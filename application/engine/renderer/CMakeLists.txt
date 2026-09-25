@@ -18,6 +18,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(
         TempestRenderer PRIVATE
-        SDL3::SDL3-static
+        TempestUtils
+
         Vulkan::Headers
 )
