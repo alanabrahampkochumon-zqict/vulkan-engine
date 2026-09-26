@@ -25,7 +25,7 @@ namespace tempest::renderer
             case vk::PresentModeKHR::eImmediate:
                 return PresentMode::IMMEDIATE;
             default:
-                return PresentMode::VSYNC;
+                return PresentMode::UNSUPPORTED;
         }
     }
 

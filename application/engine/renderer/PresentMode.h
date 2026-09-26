@@ -23,7 +23,8 @@ namespace tempest::renderer
     {
         VSYNC, /// FIFO
         MAILBOX,
-        IMMEDIATE
+        IMMEDIATE,
+        UNSUPPORTED = std::numeric_limits<uint8_t>::max()
     };
 
     constexpr PresentMode fromVKPresentMode(vk::PresentModeKHR vkPresentMode) noexcept;

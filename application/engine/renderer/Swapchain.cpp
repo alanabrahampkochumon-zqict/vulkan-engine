@@ -15,20 +15,19 @@
 
 namespace tempest::renderer
 {
-    void SwapChain::createSwapChain(const RenderDevice& device, const platform::TempestSurface& surface) noexcept
+    void SwapChain::createSwapChain(const PresentMode presentMode) noexcept
     {
-        const auto& vkSurface = *surface.getBaseSurface();
+        const auto& vkSurface = *_surface.getBaseSurface();
         const vk::SurfaceCapabilitiesKHR surfaceCapabilities =
-            device.getPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface);
-        _extent                      = chooseSwapExtent(surfaceCapabilities);
-        const uint32_t minImageCount = chooseMinImageCount(surfaceCapabilities);
+            _device.getPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface);
+        _extent                      = chooseSwapChainExtent();
+        const uint32_t minImageCount = chooseMinImageCount();
 
-        const auto availableFormats      = device.getPhysicalDevice().getSurfaceFormatsKHR(vkSurface);
-        swapChainSurfaceFormat           = chooseSurfaceFormat(availableFormats);
-        const auto availablePresentModes = device.getPhysicalDevice().getSurfacePresentModesKHR(vkSurface);
+        _format                          = chooseSurfaceFormat();
+        const auto availablePresentModes = _device.getPhysicalDevice().getSurfacePresentModesKHR(vkSurface);
 
-        const vk::SwapchainCreateInfoKHR swapChainCI{
-            .surface          = surface,
+        const vk::SwapchainCreateInfoKHR swapChainCreateInfo{
+            .surface          = _surface.getBaseSurface(),
             .minImageCount    = minImageCount,
             .imageFormat      = _format.format,
             .imageColorSpace  = _format.colorSpace,
@@ -43,49 +42,34 @@ namespace tempest::renderer
             .preTransform = surfaceCapabilities.currentTransform,
             // Whether to use alpha channel for blending with other windows, almost always false
             .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
-            .presentMode    = choosePresentationMode(availablePresentModes),
+            .presentMode    = toVKPresentMode(choosePresentationMode(presentMode)),
             .clipped        = true, // Clip obscured pixels
             // For swap chain recreation
             .oldSwapchain = nullptr
 
         };
-        _swapChainInstance = vk::raii::SwapchainKHR(device, swapChainCI);
+        _swapChainInstance = vk::raii::SwapchainKHR(_device.getDevice(), swapChainCreateInfo);
         _images            = _swapChainInstance.getImages();
     }
 
 
 
-    vk::SurfaceFormatKHR TempestEngine::chooseSurfaceFormat(
-        const std::vector<vk::SurfaceFormatKHR>& surfaceFormats) const noexcept
+    std::vector<PresentMode> SwapChain::querySupportedPresentModes() const noexcept
     {
-        assert(surfaceFormats.size() > 0);
-        // Find a suitable format with srgb colorspace, and return the first one if not supported
-        const auto formatIt = std::ranges::find_if(surfaceFormats, [](const auto& surfaceFormat) {
-            return surfaceFormat.format == vk::Format::eB8G8R8A8Srgb &&
-                surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
-        });
-        return formatIt != surfaceFormats.end() ? *formatIt : surfaceFormats[0];
+        const auto vkPresentModes = _device.getPhysicalDevice().getSurfacePresentModesKHR(_surface.getBaseSurface());
+        std::vector<PresentMode> presentModes;
+        for (const auto vkPresentMode : vkPresentModes)
+        {
+            if (const auto presentMode = fromVKPresentMode(vkPresentMode); presentMode != PresentMode::UNSUPPORTED)
+            {
+                presentModes.emplace_back(presentMode);
+            }
+        }
+        return presentModes;
     }
 
 
-    vk::PresentModeKHR TempestEngine::choosePresentationMode(
-        const std::vector<vk::PresentModeKHR>& presentModes) const noexcept
-    {
-        // Ensure that at least Fifo is supported
-        assert(std::ranges::any_of(presentModes, [](const auto& presentMode) {
-            return presentMode == vk::PresentModeKHR::eFifo;
-        }));
-        // If mailbox is supported choose that else use Fifo as fallback
-        return std::ranges::any_of(presentModes,
-                                   [](const auto& presentMode) {
-                                       return presentMode == vk::PresentModeKHR::eMailbox;
-                                   })
-            ? vk::PresentModeKHR::eMailbox
-            : vk::PresentModeKHR::eFifo;
-    }
-
-
-    void SwapChain::createImageView() noexcept
+    void SwapChain::createImageViews() noexcept
     {
         assert(_imageViews.empty() && "SwapChain Image Views are not empty!");
         _imageViews.reserve(_images.size());
@@ -94,6 +78,7 @@ namespace tempest::renderer
             _imageViews.emplace_back(createImageView(image, _format.format, vk::ImageAspectFlagBits::eColor, 1));
         }
     }
+
 
     uint32_t SwapChain::chooseMinImageCount() const noexcept
     {
@@ -107,7 +92,7 @@ namespace tempest::renderer
     }
 
 
-    vk::Extent2D SwapChain::chooseSwapChainExtent(const platform::TempestWindow& window) const noexcept
+    vk::Extent2D SwapChain::chooseSwapChainExtent() const noexcept
     {
         // Choose the resolution of the swap chain
         // If the current extend is not the max value for uint32_t(set by some window managers)
@@ -117,12 +102,62 @@ namespace tempest::renderer
             return _capabilities.currentExtent;
 
         // We need to clamp the width and height with the valid ranges of vulkan surface
-        const auto [width, height] = window.getWindowExtent();
+        const auto [width, height] = _window.getWindowExtent();
         return vk::Extent2D{
             .width =
                 std::clamp<uint32_t>(width, _capabilities.minImageExtent.width, _capabilities.maxImageExtent.width),
             .height =
                 std::clamp<uint32_t>(height, _capabilities.minImageExtent.height, _capabilities.maxImageExtent.height),
         };
+    }
+
+    PresentMode SwapChain::choosePresentationMode(const PresentMode presentMode) const noexcept
+    {
+        const auto supportedPresentModes = querySupportedPresentModes();
+
+        // Ensure that at least FIFO(VSYNC) is supported.
+        assert(std::ranges::any_of(supportedPresentModes, [](const auto& presentMode) {
+            return presentMode == PresentMode::VSYNC;
+        }));
+        // Choose the selected present mode if available choose VSYNC
+        for (const auto supportedPresentMode : supportedPresentModes)
+        {
+            if (presentMode == supportedPresentMode)
+            {
+                return presentMode;
+            }
+        }
+        return PresentMode::VSYNC;
+    }
+
+    vk::SurfaceFormatKHR SwapChain::chooseSurfaceFormat() const noexcept
+    {
+        // Query the surface format
+        const auto surfaceFormats = _device.getPhysicalDevice().getSurfaceFormatsKHR();
+        assert(surfaceFormats.size() > 0);
+        // Find a suitable format with srgb colorspace, and return the first one if not supported
+        const auto formatIt = std::ranges::find_if(surfaceFormats, [](const auto& surfaceFormat) {
+            return surfaceFormat.format == vk::Format::eB8G8R8A8Srgb &&
+                surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+        });
+        return formatIt != surfaceFormats.end() ? *formatIt : surfaceFormats[0];
+    }
+
+
+    /// TODO: Migrate to a separate image view class maybe?
+    vk::raii::ImageView SwapChain::createImageView(const vk::Image& image, const vk::Format format,
+                                                   const vk::ImageAspectFlags aspectFlags,
+                                                   const uint32_t mipLevel) const noexcept
+    {
+        const vk::ImageViewCreateInfo viewInfo{ .image            = image,
+                                                .viewType         = vk::ImageViewType::e2D,
+                                                .format           = format,
+                                                .subresourceRange = { .aspectMask     = aspectFlags,
+                                                                      .baseMipLevel   = 0,
+                                                                      .levelCount     = mipLevel,
+                                                                      .baseArrayLayer = 0,
+                                                                      .layerCount     = 1 } };
+
+        return vk::raii::ImageView(_device.getDevice(), viewInfo);
     }
 } // namespace tempest::renderer

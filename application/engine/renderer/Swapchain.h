@@ -9,13 +9,18 @@
  * @copyright Copyright (c) 2026 Alan Abraham P Kochumon
  */
 
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+
+#include "../platform/TempestSurface.h"
 #include "../platform/Window.h"
 
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include "PresentMode.h"
+
 #include <vulkan/vulkan_raii.hpp>
 
 namespace tempest::renderer
 {
+    class RenderDevice;
     class SwapChain
     {
     public:
@@ -25,20 +30,31 @@ namespace tempest::renderer
         [[nodiscard]] const vk::Extent2D& getExtent() const { return _extent; }
         [[nodiscard]] const vk::SurfaceFormatKHR& getFormat() const { return _format; }
 
-    private:
-        void createSwapChain() noexcept;
-        void createImageView() noexcept;
+        void createSwapChain(PresentMode presentMode) noexcept;
 
-        [[nodiscard]] vk::Extent2D chooseSwapChainExtent(const platform::TempestWindow& window) const noexcept;
+        [[nodiscard]] std::vector<PresentMode> querySupportedPresentModes() const noexcept;
+
+    private:
+        void createImageViews() noexcept;
+
+        [[nodiscard]] vk::Extent2D chooseSwapChainExtent() const noexcept;
         [[nodiscard]] uint32_t SwapChain::chooseMinImageCount() const noexcept;
+        [[nodiscard]] PresentMode choosePresentationMode(PresentMode presentMode) const noexcept;
+        [[nodiscard]] vk::SurfaceFormatKHR chooseSurfaceFormat() const noexcept;
+        [[nodiscard]] vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format,
+                                                          vk::ImageAspectFlags aspectFlags,
+                                                          uint32_t mipLevel) const noexcept;
 
     private:
-        std::vector<vk::raii::Image> _images;
+        std::vector<vk::Image> _images;
         std::vector<vk::raii::ImageView> _imageViews;
         vk::raii::SwapchainKHR _swapChainInstance{ nullptr };
         vk::Extent2D _extent{};
         vk::SurfaceFormatKHR _format;
         vk::PresentModeKHR _selectedPresentMode{};
         vk::SurfaceCapabilitiesKHR& _capabilities;
+        RenderDevice& _device;
+        platform::TempestSurface& _surface;
+        platform::TempestWindow& _window;
     };
 } // namespace tempest::renderer
