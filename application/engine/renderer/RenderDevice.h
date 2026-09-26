@@ -51,7 +51,7 @@ namespace tempest::renderer
         std::vector<RenderQueue> _queues;
         vk::PhysicalDeviceFeatures _features;
         std::vector<const char*> _requiredExtensions;
-
+        // TODO: Move to a top level location.
         static constexpr uint32_t MIN_API_VERSION{ vk::ApiVersion13 };
     };
 } // namespace tempest::renderer

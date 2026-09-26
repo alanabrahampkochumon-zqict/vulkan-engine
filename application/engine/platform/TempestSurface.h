@@ -13,13 +13,13 @@
 #include "Window.h"
 
 namespace tempest::platform
-{
+{ss
     class TempestSurface
     {
     public:
         TempestSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept;
 
-        const vk::raii::SurfaceKHR& getSurface() const noexcept { return _vulkanSurface; }
+        const vk::raii::SurfaceKHR& getBaseSurface() const noexcept { return _vulkanSurface; }
 
     protected:
         bool createSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept;

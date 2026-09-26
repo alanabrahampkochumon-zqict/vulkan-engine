@@ -6,11 +6,15 @@ add_library(
         RenderPipeline.cpp
         RenderDevice.cpp
         GraphicsContext.cpp
+        Swapchain.cpp
+        PresentMode.cpp
 
         RenderPipeline.h
         RenderDevice.h
         RenderQueue.h
         GraphicsContext.h
+        Swapchain.h
+        PresentMode.h
 )
 
 target_compile_features(TempestRenderer PRIVATE cxx_std_20)

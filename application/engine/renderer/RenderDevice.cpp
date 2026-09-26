@@ -147,7 +147,7 @@ namespace tempest::renderer
             for (uint32_t qFamilyIndex = 0; qFamilyIndex < queueProperties.size(); ++qFamilyIndex)
             {
                 if (queueProperties[qFamilyIndex].queueFlags & queueFlags[i].first &&
-                    _physicalDevice.getSurfaceSupportKHR(qFamilyIndex, *surface.getSurface()))
+                    _physicalDevice.getSurfaceSupportKHR(qFamilyIndex, *surface.getBaseSurface()))
                 {
                     _queues[i].familyIndex = qFamilyIndex;
                     break;

@@ -9,6 +9,8 @@
  * @copyright Copyright (c) 2026 Alan Abraham P Kochumon
  */
 
+#include "WindowExtent.h"
+
 #include <string>
 
 /// Forward declaration
@@ -38,6 +40,8 @@ namespace tempest::platform
 
 
         static char const* const* getRequiredExtensions(uint32_t& count) noexcept;
+
+        WindowExtent getWindowExtent() const noexcept;
 
     private:
         SDL_Window* _window;

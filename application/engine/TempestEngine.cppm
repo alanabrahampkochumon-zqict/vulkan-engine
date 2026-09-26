@@ -36,13 +36,17 @@ namespace tempest
         void createSurface();
         void pickPhysicalDevice();
         void createLogicalDevice();
+
         void createSwapChain();
         void createImageViews();
+
         void createDescriptorSetLayout();
+
         void createGraphicsPipeline();
         void createVertexBuffer();
         void createIndexBuffer();
         void createUniformBuffers();
+
         void createDescriptorPool();
         void createDescriptorSets();
         void createTextureImage();

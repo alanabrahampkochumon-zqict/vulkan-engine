@@ -12,8 +12,8 @@
 
 #include "../utils/Logger.h"
 
-#include <SDL3/SDL_vulkan.h>
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 namespace tempest::platform
 {
@@ -60,6 +60,13 @@ namespace tempest::platform
     char const* const* TempestWindow::getRequiredExtensions(uint32_t& count) noexcept
     { return SDL_Vulkan_GetInstanceExtensions(&count); }
 
+
+    WindowExtent TempestWindow::getWindowExtent() const noexcept
+    {
+        int width{}, height{};
+        SDL_GetWindowSizeInPixels(_window, &width, &height);
+        return { .width = static_cast<size_t>(width), .height = static_cast<size_t>(height) };
+    }
 
 
     TempestWindow::~TempestWindow() noexcept
