@@ -15,11 +15,22 @@
 
 namespace tempest::renderer
 {
-    void SwapChain::createSwapChain(const PresentMode presentMode) noexcept
+    SwapChain::SwapChain(RenderDevice& device, platform::TempestSurface& surface, platform::TempestWindow& window,
+                         const PresentMode presentMode)
+
+        : _selectedPresentMode(presentMode), _device(device), _surface(surface), _window(window)
     {
-        const auto& vkSurface = *_surface.getBaseSurface();
-        const vk::SurfaceCapabilitiesKHR surfaceCapabilities =
-            _device.getPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface);
+        create(presentMode);
+        _capabilities = querySurfaceCapabilities();
+    }
+
+    SwapChain::~SwapChain() noexcept { cleanupSwapChain(); }
+
+    void SwapChain::create(const PresentMode presentMode) noexcept { createVulkanSwapChain(presentMode, nullptr); }
+
+    void SwapChain::createVulkanSwapChain(const PresentMode presentMode, const vk::SwapchainKHR* oldSwapChain) noexcept
+    {
+        const auto& vkSurface        = *_surface.getBaseSurface();
         _extent                      = chooseSwapChainExtent();
         const uint32_t minImageCount = chooseMinImageCount();
 
@@ -39,20 +50,26 @@ namespace tempest::renderer
             // eConcurrent: Shared by multiple queue without exclusive ownership transfer
             .imageSharingMode = vk::SharingMode::eExclusive,
             // SupportTransforms from capabilities. To specify no transform provide currentTransform.
-            .preTransform = surfaceCapabilities.currentTransform,
+            .preTransform = _capabilities.currentTransform,
             // Whether to use alpha channel for blending with other windows, almost always false
             .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
             .presentMode    = toVKPresentMode(choosePresentationMode(presentMode)),
             .clipped        = true, // Clip obscured pixels
             // For swap chain recreation
-            .oldSwapchain = nullptr
+            .oldSwapchain = *oldSwapChain
 
         };
         _swapChainInstance = vk::raii::SwapchainKHR(_device.getDevice(), swapChainCreateInfo);
         _images            = _swapChainInstance.getImages();
     }
 
-
+    void SwapChain::cleanupSwapChain() noexcept
+    {
+        // Rest will be done by vk::raii dtor
+        _imageViews.clear();
+        _images.clear();
+        _swapChainInstance = nullptr;
+    }
 
     std::vector<PresentMode> SwapChain::querySupportedPresentModes() const noexcept
     {
@@ -68,6 +85,16 @@ namespace tempest::renderer
         return presentModes;
     }
 
+    void SwapChain::recreateSwapChain(const PresentMode presentMode) noexcept
+    {
+        cleanupSwapChain();
+        createVulkanSwapChain(presentMode == PresentMode::UNSUPPORTED ? _selectedPresentMode : presentMode,
+                              &*_swapChainInstance);
+        createImageViews();
+        // TODO:
+        // createColorResources();
+        // createDepthResources();
+    }
 
     void SwapChain::createImageViews() noexcept
     {
@@ -79,7 +106,6 @@ namespace tempest::renderer
         }
     }
 
-
     uint32_t SwapChain::chooseMinImageCount() const noexcept
     {
         // Choose an appropriate image count in the range between minImageCount < n <= maxImageCount/3
@@ -90,7 +116,6 @@ namespace tempest::renderer
         }
         return minImageCount;
     }
-
 
     vk::Extent2D SwapChain::chooseSwapChainExtent() const noexcept
     {
@@ -160,4 +185,8 @@ namespace tempest::renderer
 
         return vk::raii::ImageView(_device.getDevice(), viewInfo);
     }
+
+
+    vk::SurfaceCapabilitiesKHR SwapChain::querySurfaceCapabilities() const noexcept
+    { return _device.getPhysicalDevice().getSurfaceCapabilitiesKHR(_surface.getBaseSurface()); }
 } // namespace tempest::renderer
