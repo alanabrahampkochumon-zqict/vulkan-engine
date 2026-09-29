@@ -10,6 +10,8 @@
 
 #include "Buffer.h"
 
+#include "CommandBuffer.h"
+
 
 namespace tempest::renderer
 {
@@ -52,11 +54,17 @@ namespace tempest::renderer
     }
 
 
-    void Buffer::copyTo(const Buffer& destination, size_t size) const noexcept
+    void Buffer::copyTo(const Buffer& destination, const size_t size, const RenderQueue& queue) const noexcept
     {
-        // TODO: Write after adding CommandBuffer
+        const CommandBuffer copyCommandBuffer{ _device, queue, 1 };
+        copyCommandBuffer.beginSingleTimeRecording();
+        copyCommandBuffer.getBaseCommandBuffers()[0].copyBuffer(_buffer, destination._buffer,
+                                                                vk::BufferCopy(0, 0, size));
+        copyCommandBuffer.endSingleTimeRecordingAndSubmit();
     }
 
 
-    void Buffer::copy(const Buffer& source, const Buffer& destination, size_t size) noexcept { source.copyTo(destination, size); }
+    void Buffer::copy(const Buffer& source, const Buffer& destination, const size_t size,
+                      const RenderQueue& queue) noexcept
+    { source.copyTo(destination, size, queue); }
 } // namespace tempest::renderer

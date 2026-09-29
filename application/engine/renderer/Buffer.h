@@ -42,10 +42,13 @@ namespace tempest::renderer
 
 
         /// Copy the current buffer to a new destinations.
-        void copyTo(const Buffer& destination, size_t size) const noexcept;
+        void copyTo(const Buffer& destination, size_t size, const RenderQueue& queue) const noexcept;
+
+        /// TODO: Add CopyToImage
 
         /// Copy @p source buffer to @p destination.
-        static void copy(const Buffer& source, const Buffer& destination, size_t size) noexcept;
+        static void copy(const Buffer& source, const Buffer& destination, size_t size,
+                         const RenderQueue& queue) noexcept;
 
         [[nodiscard]] const vk::raii::Buffer& getBaseBuffer() const { return _buffer; }
 
