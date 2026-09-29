@@ -7,6 +7,7 @@ add_library(
         CommandBuffer.cpp
         RenderPipeline.cpp
         RenderDevice.cpp
+        Image.cpp
         GraphicsContext.cpp
         Swapchain.cpp
         PresentMode.cpp
@@ -16,6 +17,7 @@ add_library(
         RenderPipeline.h
         RenderDevice.h
         RenderQueue.h
+        Image.h
         GraphicsContext.h
         Swapchain.h
         PresentMode.h

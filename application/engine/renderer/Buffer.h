@@ -26,21 +26,6 @@ namespace tempest::renderer
         Buffer(const Buffer& other)            = delete;
         Buffer& operator=(const Buffer& other) = delete;
 
-        Buffer(Buffer&& other) noexcept
-            : _size(other._size), _buffer(std::move(other._buffer)), _memory(std::move(other._memory))
-        {}
-
-        Buffer& operator=(Buffer&& other) noexcept
-        {
-            if (this == &other)
-                return *this;
-            _size   = other._size;
-            _buffer = std::move(other._buffer);
-            _memory = std::move(other._memory);
-            return *this;
-        }
-
-
         /// Copy the current buffer to a new destinations.
         void copyTo(const Buffer& destination, size_t size, const RenderQueue& queue) const noexcept;
 
@@ -53,7 +38,10 @@ namespace tempest::renderer
         [[nodiscard]] const vk::raii::Buffer& getBaseBuffer() const { return _buffer; }
 
     private:
-        uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
+        static uint32_t findMemoryType(const RenderDevice& device, uint32_t typeFilter,
+                                       vk::MemoryPropertyFlags properties) noexcept;
+
+        friend class Image; /// TODO: Update Leaky Abstraction?
 
     private:
         size_t _size{};

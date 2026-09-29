@@ -10,6 +10,7 @@
 
 #include "Buffer.h"
 
+#include "../utils/Logger.h"
 #include "CommandBuffer.h"
 
 
@@ -26,19 +27,20 @@ namespace tempest::renderer
                                                .sharingMode = vk::SharingMode::eExclusive };
         _buffer                                      = vk::raii::Buffer(_device.getDevice(), bufferInfo);
         const vk::MemoryRequirements memRequirements = _buffer.getMemoryRequirements();
-        const vk::MemoryAllocateInfo allocateInfo{ .allocationSize = memRequirements.size,
-                                                   .memoryTypeIndex =
-                                                       findMemoryType(memRequirements.memoryTypeBits, memProperties) };
+        const vk::MemoryAllocateInfo allocateInfo{ .allocationSize  = memRequirements.size,
+                                                   .memoryTypeIndex = findMemoryType(
+                                                       _device, memRequirements.memoryTypeBits, memProperties) };
         _memory = vk::raii::DeviceMemory(_device.getDevice(), allocateInfo);
         _buffer.bindMemory(*_memory, 0);
     }
 
 
-    uint32_t Buffer::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const
+    uint32_t Buffer::findMemoryType(const RenderDevice& device, const uint32_t typeFilter,
+                                    const vk::MemoryPropertyFlags properties) noexcept
     {
         // Graphics cards provide different memory types, so we need to query and choose one
         // that best fits our requirements
-        const vk::PhysicalDeviceMemoryProperties memProperties = _device.getPhysicalDevice().getMemoryProperties();
+        const vk::PhysicalDeviceMemoryProperties memProperties = device.getPhysicalDevice().getMemoryProperties();
         // Has memoryTypes and memoryHeaps
 
         // Return the index of memory type if it matches the properties we need.
@@ -49,8 +51,9 @@ namespace tempest::renderer
                 return i;
             }
         }
-
-        throw std::runtime_error("Failed to find a suitable memory type.");
+        log::error("Failed to find a suitable memory type");
+        // TODO: Check whether this is a valid type and only return an invalid type.
+        return std::numeric_limits<uint32_t>::max();
     }
 
 
