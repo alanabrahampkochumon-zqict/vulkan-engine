@@ -4,6 +4,7 @@ add_library(
         ${vulkanhpp_SOURCE_DIR}
 
         Buffer.cpp
+        CommandBuffer.cpp
         RenderPipeline.cpp
         RenderDevice.cpp
         GraphicsContext.cpp
@@ -11,6 +12,7 @@ add_library(
         PresentMode.cpp
 
         Buffer.h
+        CommandBuffer.h
         RenderPipeline.h
         RenderDevice.h
         RenderQueue.h
