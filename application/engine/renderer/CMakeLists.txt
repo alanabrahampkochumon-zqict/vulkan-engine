@@ -3,12 +3,14 @@ add_library(
         OBJECT
         ${vulkanhpp_SOURCE_DIR}
 
+        Buffer.cpp
         RenderPipeline.cpp
         RenderDevice.cpp
         GraphicsContext.cpp
         Swapchain.cpp
         PresentMode.cpp
 
+        Buffer.h
         RenderPipeline.h
         RenderDevice.h
         RenderQueue.h

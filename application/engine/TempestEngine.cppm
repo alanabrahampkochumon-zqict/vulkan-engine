@@ -124,6 +124,7 @@ namespace tempest
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
 
         vk::raii::DescriptorSetLayout descriptorSetLayout{ nullptr };
+        vk::raii::DescriptorPool descriptorPool{ nullptr };
         vk::raii::PipelineLayout pipelineLayout{ nullptr };
         vk::raii::Pipeline graphicsPipeline{ nullptr };
 
@@ -135,7 +136,6 @@ namespace tempest
         std::vector<void*> uniformBuffersMapped{};
         std::vector<vk::raii::CommandBuffer> commandBuffers{};
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores{}, presentFinishedSemaphores{};
-        vk::raii::DescriptorPool descriptorPool{ nullptr };
         std::vector<vk::raii::DescriptorSet> descriptorSets{};
         vk::raii::Image textureImage{ nullptr };
         vk::raii::DeviceMemory textureImageMemory{ nullptr };
