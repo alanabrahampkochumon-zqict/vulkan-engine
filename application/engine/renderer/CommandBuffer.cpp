@@ -14,7 +14,7 @@
 namespace tempest::renderer
 {
 
-    CommandBuffer::CommandBuffer(const RenderDevice& device, const RenderQueue& queue, const size_t count) noexcept
+    CommandBuffer::CommandBuffer(RenderDevice& device, RenderQueue& queue, const size_t count) noexcept
         : _count{ count }, _device{ device }, _queue{ queue }
     {
         createCommandPool();

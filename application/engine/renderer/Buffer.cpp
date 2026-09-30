@@ -16,7 +16,7 @@
 
 namespace tempest::renderer
 {
-    Buffer::Buffer(const RenderDevice& device, const size_t size, const vk::BufferUsageFlagBits usageFlags,
+    Buffer::Buffer(RenderDevice& device, const size_t size, const vk::BufferUsageFlagBits usageFlags,
                    const vk::MemoryPropertyFlags memProperties) noexcept
         : _size{ size }, _device{ device }
     {
@@ -57,7 +57,7 @@ namespace tempest::renderer
     }
 
 
-    void Buffer::copyTo(const Buffer& destination, const size_t size, const RenderQueue& queue) const noexcept
+    void Buffer::copyTo(const Buffer& destination, const size_t size, RenderQueue& queue) const noexcept
     {
         const CommandBuffer copyCommandBuffer{ _device, queue, 1 };
         copyCommandBuffer.beginSingleTimeRecording();
@@ -68,6 +68,15 @@ namespace tempest::renderer
 
 
     void Buffer::copy(const Buffer& source, const Buffer& destination, const size_t size,
-                      const RenderQueue& queue) noexcept
+                      RenderQueue& queue) noexcept
     { source.copyTo(destination, size, queue); }
+
+
+    /// TODO: Extend with offset and mappingsize?
+    void Buffer::memcpy(const void* source, const size_t size) const noexcept
+    {
+        void* memory = _memory.mapMemory(0, size);
+        std::memcpy(memory, source, size);
+        _memory.unmapMemory();
+    }
 } // namespace tempest::renderer

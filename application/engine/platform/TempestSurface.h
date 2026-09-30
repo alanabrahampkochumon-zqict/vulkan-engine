@@ -13,7 +13,7 @@
 #include "Window.h"
 
 namespace tempest::platform
-{ss
+{
     class TempestSurface
     {
     public:

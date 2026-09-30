@@ -1514,7 +1514,7 @@ namespace tempest
             return vk::SampleCountFlagBits::e4;
         if (count & vk::SampleCountFlagBits::e2)
             return vk::SampleCountFlagBits::e2;
-        if (count & vk::SampleCountFlagBits::e1)
+        // if (count & vk::SampleCountFlagBits::e1)
             return vk::SampleCountFlagBits::e1;
     }
 } // namespace tempest

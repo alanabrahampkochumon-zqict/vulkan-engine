@@ -20,16 +20,23 @@ namespace tempest::renderer
     class Texture
     {
     public:
-        Texture(std::string texturePath) noexcept;
+        Texture(RenderDevice& device, std::string texturePath) noexcept;
 
+        [[nodiscard]] const Image& getImage() const { return _image; }
+        [[nodiscard]] const vk::raii::Sampler& getSampler() const { return _sampler; }
+        [[nodiscard]] int getWidth() const { return _width; }
+        [[nodiscard]] int getHeight() const { return _height; }
+        [[nodiscard]] int getChannels() const { return _channels; }
 
     private:
-        void loadTexture() noexcept;
+        void createSampler() noexcept;
 
 
     private:
         Image _image;
         vk::raii::Sampler _sampler;
         std::string _path;
+        int _width, _height, _channels;
+        RenderDevice& _device;
     };
 } // namespace tempest::renderer

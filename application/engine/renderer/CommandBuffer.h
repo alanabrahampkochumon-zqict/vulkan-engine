@@ -16,11 +16,10 @@
 // TODO: Update command buffer to be singular
 namespace tempest::renderer
 {
-
     class CommandBuffer
     {
     public:
-        CommandBuffer(const RenderDevice& device, const RenderQueue& queue, size_t count) noexcept;
+        CommandBuffer(RenderDevice& device, RenderQueue& queue, size_t count) noexcept;
         void startRecording(uint32_t index) const noexcept;
         void endRecording(uint32_t index) const noexcept;
 
@@ -42,9 +41,9 @@ namespace tempest::renderer
         vk::raii::CommandPool _commandPool{ nullptr };
         std::vector<vk::raii::CommandBuffer> _commandBuffers{};
         const size_t _count;
-        const RenderDevice& _device;
+        RenderDevice& _device;
         // While the device has the render queue information, since we are allocating from a commandpool for that
         // queue, user has to explicitly provide it.
-        const RenderQueue& _queue;
+        RenderQueue& _queue;
     };
 } // namespace tempest::renderer

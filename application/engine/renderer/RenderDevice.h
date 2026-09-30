@@ -30,6 +30,7 @@ namespace tempest::renderer
         [[nodiscard]] const vk::raii::PhysicalDevice& getPhysicalDevice() const noexcept { return _physicalDevice; }
         [[nodiscard]] const vk::raii::Device& getDevice() const noexcept { return _device; }
         [[nodiscard]] const std::vector<RenderQueue>& getQueues() const noexcept { return _queues; }
+        [[nodiscard]] std::vector<RenderQueue>& getQueues() noexcept { return _queues; }
         [[nodiscard]] const vk::PhysicalDeviceFeatures& getDeviceFeatures() const noexcept { return _features; }
 
         [[nodiscard]] constexpr static uint32_t getMinAPIVersion() noexcept { return MIN_API_VERSION; }
