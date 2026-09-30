@@ -10,7 +10,9 @@
 
 #include "Image.h"
 
+#include "../utils/Logger.h"
 #include "Buffer.h"
+#include "CommandBuffer.h"
 
 namespace tempest::renderer
 {
@@ -27,11 +29,61 @@ namespace tempest::renderer
           _samples{ numSamples },
           _mipLevels{ mipLevels },
           _width{ width },
-          _height{ height }
+          _height{ height },
+          _aspectFlags{ aspectFlags }
     {
         createImage();
-        createImageView(aspectFlags);
+        createImageView(_aspectFlags);
     }
+
+
+    void Image::transitionImageLayout(const vk::ImageLayout newLayout, const CommandBuffer& commandBuffer,
+                                      const size_t commandBufferIndex) const noexcept
+    {
+        // To transition an image layout, we need to create a pipeline barrier
+        // This can be used for transitioning queue families when vk::SharingMode::eExclusive is used.
+        vk::ImageMemoryBarrier barrier{ .oldLayout           = _layout,
+                                        .newLayout           = newLayout,
+                                        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+                                        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+                                        .image               = _image,
+                                        // Specify the affect part of the image
+                                        .subresourceRange = {
+                                            .aspectMask = _aspectFlags, .levelCount = _mipLevels, .layerCount = 1 } };
+
+        // SrcStage -> PipelineBarrier -> DstStage
+        vk::PipelineStageFlags sourceStage, destinationStage;
+        // We need to handle two transitions Undefined -> TransferOpt and TransferOpt -> ShaderOpt
+        // When transitioning from Undefined to ShaderOptimal
+        // we are going through TopOfPipe -> Transfer -> FragmentShader
+        // Moreover, transfer is a pseudo stage with compute and graphics pipeline.
+        // TODO: Make this more generic.
+        if (_layout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal)
+        {
+            barrier.srcAccessMask = {};
+            barrier.dstAccessMask = {};
+
+            sourceStage      = vk::PipelineStageFlagBits::eTopOfPipe;
+            destinationStage = vk::PipelineStageFlagBits::eTransfer;
+        }
+        else if (_layout == vk::ImageLayout::eTransferDstOptimal &&
+                 newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+        {
+            barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+            sourceStage      = vk::PipelineStageFlagBits::eTransfer;
+            destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+        }
+        else
+        {
+            log::error("Unsupported layout transition");
+            return;
+        }
+        commandBuffer.getBaseCommandBuffers()[commandBufferIndex].pipelineBarrier(sourceStage, destinationStage, {}, {},
+                                                                                  nullptr, barrier);
+    }
+
 
 
     void Image::createImage() noexcept

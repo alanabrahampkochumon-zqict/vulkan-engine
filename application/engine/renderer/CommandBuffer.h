@@ -13,6 +13,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+// TODO: Update command buffer to be singular
 namespace tempest::renderer
 {
 
