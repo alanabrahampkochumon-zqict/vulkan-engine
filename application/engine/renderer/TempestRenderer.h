@@ -26,7 +26,7 @@ namespace tempest::renderer
     class TempestRenderer
     {
     public:
-        TempestRenderer(platform::TempestWindow& window, platform::TempestSurface& surface) noexcept;
+        TempestRenderer(platform::TempestWindow& window, platform::TempestSurface& surface, GraphicsContext& context) noexcept;
         bool init() noexcept;
 
         void draw() const noexcept;
@@ -34,6 +34,7 @@ namespace tempest::renderer
     private:
         platform::TempestWindow& _window;
         platform::TempestSurface& _surface;
+        GraphicsContext& _context;
         // RenderDevice _device;
         // GraphicsContext _context;
     };

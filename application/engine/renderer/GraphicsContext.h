@@ -19,18 +19,15 @@ namespace tempest::renderer
 {
     class GraphicsContext
     {
-
-        GraphicsContext(const std::string& applicationName, uint32_t appVersion, const std::string& engineName,
-                        uint32_t engineVersion, bool enableValidationLayers = true,
-                        uint32_t minAPIVersion = MIN_API_VERSION) noexcept;
-
     public:
+        explicit GraphicsContext(bool enableValidationLayers = true) noexcept;
         GraphicsContext(const GraphicsContext& other)            = delete;
         GraphicsContext& operator=(const GraphicsContext& other) = delete;
-
         GraphicsContext(GraphicsContext&& other) noexcept;
         GraphicsContext& operator=(GraphicsContext&& other) noexcept;
 
+        bool init(const std::string& applicationName, uint32_t appVersion, const std::string& engineName,
+                  uint32_t engineVersion, uint32_t minAPIVersion) noexcept;
 
         [[nodiscard]] const vk::raii::Context& getBaseContext() const { return _context; }
         [[nodiscard]] const vk::raii::Instance& getInstance() const { return _instance; }
@@ -41,9 +38,6 @@ namespace tempest::renderer
         debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT type,
                       const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 
-        bool createVulkanInstance(const std::string& applicationName, uint32_t appVersion,
-                                  const std::string& engineName, uint32_t engineVersion,
-                                  uint32_t minAPIVersion) noexcept;
         void setupDebugMessenger() noexcept;
 
         std::vector<const char*> getRequiredExtensions() const noexcept;

@@ -15,11 +15,9 @@
 
 namespace tempest::renderer
 {
-    GraphicsContext::GraphicsContext(const std::string& applicationName, const uint32_t appVersion,
-                                     const std::string& engineName, const uint32_t engineVersion,
-                                     const bool enableValidationLayers, const uint32_t minAPIVersion) noexcept
+    GraphicsContext::GraphicsContext(const bool enableValidationLayers) noexcept
         : _enableValidationLayers(enableValidationLayers)
-    { createVulkanInstance(applicationName, appVersion, engineName, engineVersion, minAPIVersion); }
+    {  }
 
 
     GraphicsContext::GraphicsContext(GraphicsContext&& other) noexcept
@@ -65,7 +63,7 @@ namespace tempest::renderer
     }
 
 
-    bool GraphicsContext::createVulkanInstance(const std::string& applicationName, const uint32_t appVersion,
+    bool GraphicsContext::init(const std::string& applicationName, const uint32_t appVersion,
                                                const std::string& engineName, const uint32_t engineVersion,
                                                const uint32_t minAPIVersion) noexcept
     {

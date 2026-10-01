@@ -1,13 +1,21 @@
+#include "utils/Logger.h"
+
 #include <Application.h>
-#include <iostream>
 #include <print>
 #include <string>
 
-
 int main()
 {
-    std::string name = "Tempest Application";
-    tempest::TempestApp app{ name };
+    const std::string name = "Tempest Application";
+    tempest::TempestApp app{ name, 1 };
+    if (!app.init())
+    {
+        tempest::log::error("There was an error initializing the application");
+    }
+    else
+    {
+        tempest::log::info("Successfully initalized tempest application");
+    }
     app.run();
 }
 

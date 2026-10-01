@@ -18,21 +18,35 @@
 namespace tempest
 {
 
-    TempestApp::TempestApp(std::string name) noexcept
+    TempestApp::TempestApp(std::string name, const uint32_t version) noexcept
         : _window{ INIT_WIDTH, INIT_HEIGHT, std::move(name) },
-          _surface{
-              _window,
-          },
-          _renderer{ _window, _surface },
-          _isRunning(true) // TODO: Update to an init
+          _surface{ _window },
+          _graphicsContext{ true },
+          _renderer{ _window, _surface, _graphicsContext },
+          _appName{ std::move(name) },
+          _appVersion{ version },
+          _isRunning{ false }
+    {}
+
+
+    bool TempestApp::init() noexcept
     {
-        // TODO: Move to init
-        log::init(); // TODO: Move to an init
+        log::init();
+
         if (!_window.initWindow())
         {
-            std::cout << "There was an error initializing the window!\n";
-            return;
+            log::error("There was an error initializing the window!\n");
+            return false;
         }
+
+        if (!_graphicsContext.init(_appName, _appVersion, ENGINE_NAME, ENGINE_VERSION, VK_API_VERSION_1_3))
+        {
+            log::error("There was an error initializing the graphics context");
+            return false;
+        }
+
+        _isRunning = true;
+        return true;
     }
 
     void TempestApp::run() noexcept

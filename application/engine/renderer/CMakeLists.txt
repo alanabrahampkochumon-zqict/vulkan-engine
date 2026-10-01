@@ -33,7 +33,7 @@ target_compile_features(TempestRenderer PRIVATE cxx_std_20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(
-        TempestRenderer PRIVATE
+        TempestRenderer PUBLIC # TODO: Update to private after init vulkan using pimpl idiom
         TempestUtils
         std::stb
         Vulkan::Headers

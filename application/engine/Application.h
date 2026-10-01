@@ -19,19 +19,30 @@ namespace tempest
     class TempestApp
     {
     public:
-        explicit TempestApp(std::string name) noexcept;
+        explicit TempestApp(std::string name, uint32_t version) noexcept;
+
+        bool init() noexcept;
 
         void run() noexcept;
 
-        static constexpr size_t INIT_WIDTH  = 800;
-        static constexpr size_t INIT_HEIGHT = 600;
+        static constexpr size_t INIT_WIDTH       = 800;
+        static constexpr size_t INIT_HEIGHT      = 600;
+        static constexpr auto ENGINE_NAME        = "Tempest";
+        static constexpr uint32_t ENGINE_VERSION = 1;
 
+    private:
+        void handleEvents() noexcept;
+
+        /// Member Variables
     private:
         TempestWindow _window;
         TempestSurface _surface;
+        renderer::GraphicsContext _graphicsContext;
         renderer::TempestRenderer _renderer;
-        bool _isRunning;
 
-        void handleEvents() noexcept;
+        std::string _appName;
+        uint32_t _appVersion;
+
+        bool _isRunning;
     };
 } // namespace tempest
