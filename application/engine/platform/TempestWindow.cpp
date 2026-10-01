@@ -1,5 +1,5 @@
 /**
- * @file Window.cpp
+ * @file TempestWindow.cpp
  * @author Alan Abraham P Kochumon
  * @date Created on: September 23, 2026
  *
@@ -8,9 +8,8 @@
  * @copyright Copyright (c) 2026 Alan Abraham P Kochumon
  */
 
-#include "Window.h"
-
 #include "../utils/Logger.h"
+#include "TempestWindow.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>

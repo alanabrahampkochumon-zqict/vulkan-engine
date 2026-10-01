@@ -2,10 +2,10 @@ add_library(
         TempestPlatform
         OBJECT
         ${vulkanhpp_SOURCE_DIR}
-        Window.cpp
+        TempestWindow.cpp
         TempestSurface.cpp
 
-        Window.h
+        TempestWindow.h
         TempestSurface.h
 )
 

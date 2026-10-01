@@ -9,22 +9,22 @@
  * @copyright Copyright (c) 2026 Alan Abraham P Kochumon
  */
 
+#include "TempestWindow.h"
+
 #include <vulkan/vulkan_raii.hpp>
-#include "Window.h"
 
 namespace tempest::platform
 {
     class TempestSurface
     {
     public:
-        TempestSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept;
+        TempestSurface(TempestWindow& window) noexcept;
+        bool init(const vk::raii::Instance& instance) noexcept;
 
         const vk::raii::SurfaceKHR& getBaseSurface() const noexcept { return _vulkanSurface; }
 
-    protected:
-        bool createSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept;
-
     private:
+        TempestWindow& _window;
         vk::raii::SurfaceKHR _vulkanSurface;
     };
 } // namespace tempest::platform

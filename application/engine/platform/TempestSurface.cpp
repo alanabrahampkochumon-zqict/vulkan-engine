@@ -16,21 +16,13 @@
 
 namespace tempest::platform
 {
-    TempestSurface::TempestSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept
-        : _vulkanSurface(nullptr)
-    {
-        if (!createSurface(window, instance))
-        {
-            log::error("There was an error creating vulkan surface!");
-            return;
-        }
-    }
+    TempestSurface::TempestSurface(TempestWindow& window) noexcept: _window{ window }, _vulkanSurface{ nullptr } {}
 
 
-    bool TempestSurface::createSurface(const TempestWindow& window, const vk::raii::Instance& instance) noexcept
+    bool TempestSurface::init(const vk::raii::Instance& instance) noexcept
     {
         VkSurfaceKHR surface;
-        if (!SDL_Vulkan_CreateSurface(window.getCoreWindow(), *instance, nullptr, &surface))
+        if (!SDL_Vulkan_CreateSurface(_window.getCoreWindow(), *instance, nullptr, &surface))
         {
             return false;
         }

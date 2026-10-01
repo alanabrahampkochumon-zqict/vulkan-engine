@@ -11,6 +11,7 @@ add_library(
         GraphicsContext.cpp
         Swapchain.cpp
         PresentMode.cpp
+        TempestRenderer.cpp
         Texture.cpp
 
         Buffer.h
@@ -23,6 +24,7 @@ add_library(
         GraphicsContext.h
         Swapchain.h
         PresentMode.h
+        TempestRenderer.h
         Texture.h
         Vertex.h
 )

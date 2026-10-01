@@ -9,8 +9,8 @@
  * @copyright Copyright (c) 2026 Alan Abraham P Kochumon
  */
 
-#include "platform/Window.h"
-#include "renderer/RenderPipeline.h"
+#include "platform/TempestWindow.h"
+#include "renderer/TempestRenderer.h"
 
 namespace tempest
 {
@@ -28,7 +28,8 @@ namespace tempest
 
     private:
         TempestWindow _window;
-        renderer::RenderPipeline _renderPipeline;
+        TempestSurface _surface;
+        renderer::TempestRenderer _renderer;
         bool _isRunning;
 
         void handleEvents() noexcept;

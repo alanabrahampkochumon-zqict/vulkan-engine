@@ -20,11 +20,14 @@ namespace tempest
 
     TempestApp::TempestApp(std::string name) noexcept
         : _window{ INIT_WIDTH, INIT_HEIGHT, std::move(name) },
-          _renderPipeline{ "shaders/slang.spv", "shaders/slang.spv" },
+          _surface{
+              _window,
+          },
+          _renderer{ _window, _surface },
           _isRunning(true) // TODO: Update to an init
     {
         // TODO: Move to init
-        log::init();// TODO: Move to an init
+        log::init(); // TODO: Move to an init
         if (!_window.initWindow())
         {
             std::cout << "There was an error initializing the window!\n";

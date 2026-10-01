@@ -10,7 +10,7 @@
 
 #include "GraphicsContext.h"
 
-#include "../platform/Window.h"
+#include "../platform/TempestWindow.h"
 #include "../utils/Logger.h"
 
 namespace tempest::renderer

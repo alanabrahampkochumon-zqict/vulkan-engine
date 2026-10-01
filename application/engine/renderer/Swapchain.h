@@ -12,7 +12,7 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 
 #include "../platform/TempestSurface.h"
-#include "../platform/Window.h"
+#include "../platform/TempestWindow.h"
 #include "PresentMode.h"
 
 #include <vulkan/vulkan_raii.hpp>
