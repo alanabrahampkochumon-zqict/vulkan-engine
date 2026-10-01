@@ -18,11 +18,13 @@ add_library(
         RenderPipeline.h
         RenderDevice.h
         RenderQueue.h
+        PipelineConfig.h
         Image.h
         GraphicsContext.h
         Swapchain.h
         PresentMode.h
         Texture.h
+        Vertex.h
 )
 
 target_compile_features(TempestRenderer PRIVATE cxx_std_20)
@@ -33,4 +35,5 @@ target_link_libraries(
         TempestUtils
         std::stb
         Vulkan::Headers
+        glm::glm
 )

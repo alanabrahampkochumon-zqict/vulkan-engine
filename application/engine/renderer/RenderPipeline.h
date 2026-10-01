@@ -9,7 +9,13 @@
  * @copyright Copyright (c) 2026 Alan Abraham P Kochumon
  */
 
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include "PipelineConfig.h"
+#include "RenderDevice.h"
+#include "Swapchain.h"
+
 #include <string>
+#include <vulkan/vulkan_raii.hpp>
 
 namespace tempest::renderer
 {
@@ -17,12 +23,26 @@ namespace tempest::renderer
     class RenderPipeline
     {
     public:
-        RenderPipeline(const std::string& vertFilePath, const std::string& fragFilePath) noexcept;
+        RenderPipeline(RenderDevice& device, SwapChain& swapChain, PipelineConfig& config) noexcept;
+
 
     protected:
-        void createGraphicsPipeline(const std::string& vertFilePath, const std::string& fragFilePath) noexcept;
+        bool createGraphicsPipeline() noexcept;
+
+        vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const noexcept;
+        vk::Format findDepthFormat() const noexcept;
+        vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
+                                                      vk::FormatFeatureFlags features) const;
 
     private:
-        std::string _fragmentFilePath, _vertexFilePath;
+        PipelineConfig& _config;
+        vk::raii::PipelineLayout _pipelineLayout{ nullptr };
+        vk::raii::Pipeline _graphicsPipeline{ nullptr };
+        RenderDevice& _renderDevice;
+        SwapChain& _swapChain;
+
+        // Separate?
+        vk::raii::DescriptorSetLayout _descriptorSetLayout{ nullptr };
+        vk::raii::DescriptorPool _descriptorPool{ nullptr };
     };
-}
+} // namespace tempest::renderer
