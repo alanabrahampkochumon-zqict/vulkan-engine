@@ -15,16 +15,20 @@
 
 namespace tempest::renderer
 {
-    SwapChain::SwapChain(RenderDevice& device, renderer::TempestSurface& surface, platform::TempestWindow& window,
-                         const PresentMode presentMode)
+    SwapChain::SwapChain(RenderDevice& device, renderer::TempestSurface& surface, platform::TempestWindow& window)
 
-        : _selectedPresentMode(presentMode), _device(device), _surface(surface), _window(window)
+        : _selectedPresentMode(PresentMode::VSYNC), _device(device), _surface(surface), _window(window)
+    {}
+
+    SwapChain::~SwapChain() noexcept { cleanupSwapChain(); }
+
+
+    bool SwapChain::init(const PresentMode presentMode) noexcept
     {
         create(presentMode);
         _capabilities = querySurfaceCapabilities();
+        return _swapChainInstance != nullptr;
     }
-
-    SwapChain::~SwapChain() noexcept { cleanupSwapChain(); }
 
     void SwapChain::create(const PresentMode presentMode) noexcept { createVulkanSwapChain(presentMode, nullptr); }
 

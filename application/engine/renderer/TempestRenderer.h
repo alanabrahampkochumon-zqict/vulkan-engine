@@ -42,9 +42,13 @@ namespace tempest::renderer
         TempestSurface _surface;
         GraphicsContext _context;
         RenderDevice _device;
+        SwapChain _swapChain;
         // RenderPipeline _pipeline;
 
         std::string _appName, _engineName;
         uint32_t _appVersion, _engineVersion;
+
+
+        static constexpr auto MIN_GRAPHICS_API_VERSION = VK_API_VERSION_1_3;
     };
 } // namespace tempest::renderer

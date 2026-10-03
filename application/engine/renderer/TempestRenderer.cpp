@@ -20,6 +20,8 @@ namespace tempest::renderer
           _surface{ _window, _context },
           _device{ _context, _surface },
           _appName{ std::move(appName) },
+          _swapChain{ _device, _surface, _window },
+          // _pipeline{_device, _swapchain},
           _engineName{ std::move(engineName) },
           _appVersion{ appVersion },
           _engineVersion{ engineVersion }
@@ -29,7 +31,7 @@ namespace tempest::renderer
     bool TempestRenderer::init(const RendererConfig& config) noexcept
     {
 
-        if (!_context.init(_appName, _appVersion, _engineName, _engineVersion, VK_API_VERSION_1_3))
+        if (!_context.init(_appName, _appVersion, _engineName, _engineVersion, MIN_GRAPHICS_API_VERSION))
         {
             log::error("There was an error initializing the graphics context");
             return false;
@@ -38,6 +40,21 @@ namespace tempest::renderer
         if (!_surface.init())
         {
             log::error("There was an error creating the surface.");
+            return false;
+        }
+
+        constexpr QueueConfig queueConfig{ .enableGraphicsQueue         = true,
+                                           .enableSeparateTransferQueue = false,
+                                           .enableComputeQueue          = false };
+        if (!_device.init(_context.getRequiredExtensions(), queueConfig, MIN_GRAPHICS_API_VERSION))
+        {
+            log::error("There was an error initializing the graphics devices.");
+            return false;
+        }
+
+        if (!_swapChain.init(config.presentMode))
+        {
+            log::error("There was an error creating the swap chain.");
             return false;
         }
 

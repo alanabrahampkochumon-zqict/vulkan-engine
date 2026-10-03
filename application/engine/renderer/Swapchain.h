@@ -23,9 +23,10 @@ namespace tempest::renderer
     class SwapChain
     {
     public:
-        SwapChain(RenderDevice& device, TempestSurface& surface, platform::TempestWindow& window,
-                  PresentMode presentMode = PresentMode::VSYNC);
+        SwapChain(RenderDevice& device, TempestSurface& surface, platform::TempestWindow& window);
         ~SwapChain() noexcept;
+
+        bool init(PresentMode presentMode = PresentMode::VSYNC) noexcept;
 
         [[nodiscard]] const std::vector<vk::Image>& getImages() const { return _images; }
         [[nodiscard]] const std::vector<vk::raii::ImageView>& getImageViews() const { return _imageViews; }

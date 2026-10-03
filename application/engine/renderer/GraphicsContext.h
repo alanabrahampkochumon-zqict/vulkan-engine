@@ -32,6 +32,8 @@ namespace tempest::renderer
         [[nodiscard]] const vk::raii::Context& getBaseContext() const { return _context; }
         [[nodiscard]] const vk::raii::Instance& getInstance() const { return _instance; }
 
+        [[nodiscard]] std::vector<const char*> getRequiredExtensions() const noexcept;
+
     private:
         /// Vulkan Debug Callback API
         static VKAPI_ATTR vk::Bool32 VKAPI_CALL
@@ -40,7 +42,6 @@ namespace tempest::renderer
 
         void setupDebugMessenger() noexcept;
 
-        std::vector<const char*> getRequiredExtensions() const noexcept;
 
     private:
         vk::raii::Context _context{};
