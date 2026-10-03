@@ -15,7 +15,7 @@
 
 namespace tempest::renderer
 {
-    SwapChain::SwapChain(RenderDevice& device, platform::TempestSurface& surface, platform::TempestWindow& window,
+    SwapChain::SwapChain(RenderDevice& device, renderer::TempestSurface& surface, platform::TempestWindow& window,
                          const PresentMode presentMode)
 
         : _selectedPresentMode(presentMode), _device(device), _surface(surface), _window(window)

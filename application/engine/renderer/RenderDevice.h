@@ -13,8 +13,8 @@
 // #define VULKAN_HPP_NO_EXCEPTIONS // TODO: Look into this before adding
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include "../platform/TempestSurface.h"
 #include "RenderQueue.h"
+#include "TempestSurface.h"
 
 #include <vector>
 #include <vulkan/vulkan.hpp>
@@ -42,7 +42,7 @@ namespace tempest::renderer
         bool pickPhysicalDevice(const vk::raii::Instance& instance, uint32_t minAPIVersion = MIN_API_VERSION) noexcept;
 
         /// Create a logical device that interfaces with the physical device.
-        bool createLogicalDevice(const platform::TempestSurface& surface, QueueConfig config) noexcept;
+        bool createLogicalDevice(const TempestSurface& surface, QueueConfig config) noexcept;
 
         /// TODO: Update for vk specific params to renderer ones
     protected:

@@ -26,16 +26,16 @@ namespace tempest::renderer
     class TempestRenderer
     {
     public:
-        TempestRenderer(platform::TempestWindow& window, platform::TempestSurface& surface, GraphicsContext& context) noexcept;
+        TempestRenderer(platform::TempestWindow& window, GraphicsContext& context) noexcept;
         bool init() noexcept;
 
         void draw() const noexcept;
 
     private:
         platform::TempestWindow& _window;
-        platform::TempestSurface& _surface;
+        TempestSurface _surface;
         GraphicsContext& _context;
-        // RenderDevice _device;
-        // GraphicsContext _context;
+        RenderDevice _device;
+        RenderPipeline _pipeline;
     };
 } // namespace tempest::renderer

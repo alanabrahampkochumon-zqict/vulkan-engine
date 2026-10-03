@@ -3,10 +3,8 @@ add_library(
         OBJECT
         ${vulkanhpp_SOURCE_DIR}
         TempestWindow.cpp
-        TempestSurface.cpp
 
         TempestWindow.h
-        TempestSurface.h
 )
 
 target_compile_features(TempestPlatform PRIVATE cxx_std_20)

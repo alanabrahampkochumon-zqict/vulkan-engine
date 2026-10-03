@@ -12,6 +12,7 @@ add_library(
         Swapchain.cpp
         PresentMode.cpp
         TempestRenderer.cpp
+        TempestSurface.cpp
         Texture.cpp
 
         Buffer.h
@@ -25,6 +26,7 @@ add_library(
         Swapchain.h
         PresentMode.h
         TempestRenderer.h
+        TempestSurface.h
         Texture.h
         Vertex.h
 )
@@ -37,5 +39,6 @@ target_link_libraries(
         TempestUtils
         std::stb
         Vulkan::Headers
+        SDL3::SDL3-static
         glm::glm
 )

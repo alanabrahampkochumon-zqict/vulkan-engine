@@ -14,9 +14,11 @@
 
 #include <SDL3/SDL_vulkan.h>
 
-namespace tempest::platform
+namespace tempest::renderer
 {
-    TempestSurface::TempestSurface(TempestWindow& window) noexcept: _window{ window }, _vulkanSurface{ nullptr } {}
+    TempestSurface::TempestSurface(platform::TempestWindow& window) noexcept
+        : _window{ window }, _vulkanSurface{ nullptr }
+    {}
 
 
     bool TempestSurface::init(const vk::raii::Instance& instance) noexcept
@@ -31,4 +33,4 @@ namespace tempest::platform
     }
 
 
-} // namespace tempest::platform
+} // namespace tempest::renderer

@@ -11,9 +11,9 @@
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 
-#include "../platform/TempestSurface.h"
 #include "../platform/TempestWindow.h"
 #include "PresentMode.h"
+#include "TempestSurface.h"
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -23,7 +23,7 @@ namespace tempest::renderer
     class SwapChain
     {
     public:
-        SwapChain(RenderDevice& device, platform::TempestSurface& surface, platform::TempestWindow& window,
+        SwapChain(RenderDevice& device, renderer::TempestSurface& surface, platform::TempestWindow& window,
                   PresentMode presentMode = PresentMode::VSYNC);
         ~SwapChain() noexcept;
 
@@ -62,7 +62,7 @@ namespace tempest::renderer
         PresentMode _selectedPresentMode{};
         vk::SurfaceCapabilitiesKHR _capabilities;
         RenderDevice& _device;
-        platform::TempestSurface& _surface;
+        renderer::TempestSurface& _surface;
         platform::TempestWindow& _window;
     };
 } // namespace tempest::renderer

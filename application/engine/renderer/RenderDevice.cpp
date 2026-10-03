@@ -123,7 +123,7 @@ namespace tempest::renderer
         return vk::SampleCountFlagBits::e1;
     }
 
-    bool RenderDevice::createLogicalDevice(const platform::TempestSurface& surface, const QueueConfig config) noexcept
+    bool RenderDevice::createLogicalDevice(const renderer::TempestSurface& surface, const QueueConfig config) noexcept
     {
         /// Request a device with graphics family queue
         /// and vulkan 1.1 shaderDrawparams, dynamic rendering and extended dynamic state

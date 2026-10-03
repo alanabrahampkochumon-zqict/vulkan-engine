@@ -14,9 +14,8 @@
 
 namespace tempest::renderer
 {
-    TempestRenderer::TempestRenderer(platform::TempestWindow& window, platform::TempestSurface& surface,
-                                            GraphicsContext& context) noexcept
-        : _window{ window }, _surface{ surface }, _context{ context }
+    TempestRenderer::TempestRenderer(platform::TempestWindow& window, GraphicsContext& context) noexcept
+        : _window{ window }, _surface{ _window }, _context{ context }, _device(), _pipeline()
     {}
 
 
