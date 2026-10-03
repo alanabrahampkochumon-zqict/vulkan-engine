@@ -22,7 +22,7 @@ namespace tempest
         : _window{ INIT_WIDTH, INIT_HEIGHT, std::move(name) },
           _surface{ _window },
           _graphicsContext{ true },
-          _renderer{ _window, _surface, _graphicsContext },
+          _renderer{ _window, _graphicsContext },
           _appName{ std::move(name) },
           _appVersion{ version },
           _isRunning{ false }
@@ -36,12 +36,6 @@ namespace tempest
         if (!_window.initWindow())
         {
             log::error("There was an error initializing the window!\n");
-            return false;
-        }
-
-        if (!_graphicsContext.init(_appName, _appVersion, ENGINE_NAME, ENGINE_VERSION, VK_API_VERSION_1_3))
-        {
-            log::error("There was an error initializing the graphics context");
             return false;
         }
 

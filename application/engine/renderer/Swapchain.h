@@ -23,7 +23,7 @@ namespace tempest::renderer
     class SwapChain
     {
     public:
-        SwapChain(RenderDevice& device, renderer::TempestSurface& surface, platform::TempestWindow& window,
+        SwapChain(RenderDevice& device, TempestSurface& surface, platform::TempestWindow& window,
                   PresentMode presentMode = PresentMode::VSYNC);
         ~SwapChain() noexcept;
 

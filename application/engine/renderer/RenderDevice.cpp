@@ -12,17 +12,49 @@
 #include "RenderDevice.h"
 
 #include "../utils/Logger.h"
+#include "GraphicsContext.h"
 
 #include <map>
 
 namespace tempest::renderer
 {
-    RenderDevice::RenderDevice(const std::vector<const char*>& requiredExtensions) noexcept
-        : _physicalDevice{ nullptr }, _device{ nullptr }, _requiredExtensions(requiredExtensions)
+    RenderDevice::RenderDevice(const GraphicsContext& context, const TempestSurface& surface) noexcept
+        : _context{ context }, _surface{ surface }, _physicalDevice{ nullptr }, _device{ nullptr }
     {}
 
 
-    bool RenderDevice::pickPhysicalDevice(const vk::raii::Instance& instance, const uint32_t minAPIVersion) noexcept
+    RenderDevice::RenderDevice(RenderDevice&& other) noexcept
+        : _context(std::move(other._context)),
+          _surface(std::move(other._surface)),
+          _physicalDevice(std::move(other._physicalDevice)),
+          _device(std::move(other._device)),
+          _queues(std::move(other._queues)),
+          _features(std::move(other._features))
+    {}
+
+
+    bool RenderDevice::init(const std::vector<const char*>& requiredExtensions, const QueueConfig& config,
+                            const uint32_t minAPIVersion) noexcept
+    {
+        if (!pickPhysicalDevice(_context.getInstance(), requiredExtensions, minAPIVersion))
+        {
+            log::error("An error occurred while picking the physical device.");
+            return false;
+        }
+
+        if (!createLogicalDevice(_surface, requiredExtensions, config))
+        {
+            log::error("An error occurred while picking the physical device.");
+            return false;
+        }
+
+        return true;
+    }
+
+
+    bool RenderDevice::pickPhysicalDevice(const vk::raii::Instance& instance,
+                                          const std::vector<const char*>& requiredExtensions,
+                                          const uint32_t minAPIVersion) noexcept
     {
         /// Properties represent the details about the device like name, vulkan version support etc.
         /// Features represent the feature-set supported by the device like certain shader support
@@ -31,6 +63,7 @@ namespace tempest::renderer
         if (physicalDevices.empty())
         {
             log::error("No Graphics card supporting vulkan found!");
+            return false;
         }
 
         std::multimap<uint32_t, vk::raii::PhysicalDevice> gpus;
@@ -55,7 +88,7 @@ namespace tempest::renderer
             // Must have required extensions
             const auto supportedExtensions = pd.enumerateDeviceExtensionProperties();
             bool supportsAllRequiredExtensions =
-                std::ranges::all_of(_requiredExtensions, [&supportedExtensions](const auto& requiredExtension) {
+                std::ranges::all_of(requiredExtensions, [&supportedExtensions](const auto& requiredExtension) {
                     return std::ranges::any_of(
                         supportedExtensions, [requiredExtension](const auto& supportedExtension) {
                             return std::strcmp(supportedExtension.extensionName, requiredExtension);
@@ -96,9 +129,9 @@ namespace tempest::renderer
             return true;
         }
 
-        log::error("An error occurred while picking the physical device.");
         return false;
     }
+
 
 
     vk::SampleCountFlagBits RenderDevice::getMaximumSupportSamples() const noexcept
@@ -123,7 +156,10 @@ namespace tempest::renderer
         return vk::SampleCountFlagBits::e1;
     }
 
-    bool RenderDevice::createLogicalDevice(const renderer::TempestSurface& surface, const QueueConfig config) noexcept
+
+    bool RenderDevice::createLogicalDevice(const TempestSurface& surface,
+                                           const std::vector<const char*>& requiredExtensions,
+                                           const QueueConfig config) noexcept
     {
         /// Request a device with graphics family queue
         /// and vulkan 1.1 shaderDrawparams, dynamic rendering and extended dynamic state
@@ -179,8 +215,8 @@ namespace tempest::renderer
                                                .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
                                                .pQueueCreateInfos    = queueCreateInfos.data(),
                                                .enabledExtensionCount =
-                                                   static_cast<uint32_t>(_requiredExtensions.size()),
-                                               .ppEnabledExtensionNames = _requiredExtensions.data() };
+                                                   static_cast<uint32_t>(requiredExtensions.size()),
+                                               .ppEnabledExtensionNames = requiredExtensions.data() };
 
         _device = vk::raii::Device(_physicalDevice, deviceCreateInfo);
 

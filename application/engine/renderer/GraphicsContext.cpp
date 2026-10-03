@@ -15,9 +15,7 @@
 
 namespace tempest::renderer
 {
-    GraphicsContext::GraphicsContext(const bool enableValidationLayers) noexcept
-        : _enableValidationLayers(enableValidationLayers)
-    {  }
+    GraphicsContext::GraphicsContext() noexcept: _enableValidationLayers(false) {}
 
 
     GraphicsContext::GraphicsContext(GraphicsContext&& other) noexcept
@@ -64,9 +62,10 @@ namespace tempest::renderer
 
 
     bool GraphicsContext::init(const std::string& applicationName, const uint32_t appVersion,
-                                               const std::string& engineName, const uint32_t engineVersion,
-                                               const uint32_t minAPIVersion) noexcept
+                               const std::string& engineName, const uint32_t engineVersion,
+                               const uint32_t minAPIVersion, const bool enableValidationLayers) noexcept
     {
+        _enableValidationLayers = enableValidationLayers;
         const vk::ApplicationInfo applicationInfo{ .pApplicationName   = applicationName.c_str(),
                                                    .applicationVersion = VK_MAKE_VERSION(appVersion, 0, 0),
                                                    .pEngineName        = engineName.c_str(),

@@ -29,6 +29,8 @@ add_library(
         TempestSurface.h
         Texture.h
         Vertex.h
+
+        config/RendererConfig.h
 )
 
 target_compile_features(TempestRenderer PRIVATE cxx_std_20)

@@ -20,14 +20,14 @@ namespace tempest::renderer
     class GraphicsContext
     {
     public:
-        explicit GraphicsContext(bool enableValidationLayers = true) noexcept;
+        explicit GraphicsContext() noexcept;
         GraphicsContext(const GraphicsContext& other)            = delete;
         GraphicsContext& operator=(const GraphicsContext& other) = delete;
         GraphicsContext(GraphicsContext&& other) noexcept;
         GraphicsContext& operator=(GraphicsContext&& other) noexcept;
 
         bool init(const std::string& applicationName, uint32_t appVersion, const std::string& engineName,
-                  uint32_t engineVersion, uint32_t minAPIVersion) noexcept;
+                  uint32_t engineVersion, uint32_t minAPIVersion, bool enableValidationLayers = true) noexcept;
 
         [[nodiscard]] const vk::raii::Context& getBaseContext() const { return _context; }
         [[nodiscard]] const vk::raii::Instance& getInstance() const { return _instance; }

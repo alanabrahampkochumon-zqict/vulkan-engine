@@ -36,8 +36,6 @@ namespace tempest
         /// Member Variables
     private:
         TempestWindow _window;
-        TempestSurface _surface;
-        renderer::GraphicsContext _graphicsContext;
         renderer::TempestRenderer _renderer;
 
         std::string _appName;

@@ -14,12 +14,36 @@
 
 namespace tempest::renderer
 {
-    TempestRenderer::TempestRenderer(platform::TempestWindow& window, GraphicsContext& context) noexcept
-        : _window{ window }, _surface{ _window }, _context{ context }, _device(), _pipeline()
+    TempestRenderer::TempestRenderer(platform::TempestWindow& window, std::string appName, const uint32_t appVersion,
+                                     std::string engineName, const uint32_t engineVersion) noexcept
+        : _window{ window },
+          _surface{ _window },
+          _device{ _context, _surface },
+          _appName{ std::move(appName) },
+          _engineName{ std::move(engineName) },
+          _appVersion{ appVersion },
+          _engineVersion{ engineVersion }
     {}
 
 
-    bool TempestRenderer::init() noexcept { return true; }
+    bool TempestRenderer::init(const RendererConfig& config) noexcept
+    {
+
+        if (!_context.init(_appName, _appVersion, _engineName, _engineVersion, VK_API_VERSION_1_3))
+        {
+            log::error("There was an error initializing the graphics context");
+            return false;
+        }
+
+        // if (_surface.init(_context))
+        //     return true;
+    }
+
+    void TempestRenderer::beginFrame() const noexcept {}
+
+    void TempestRenderer::endFrame() const noexcept {}
+
+    void TempestRenderer::applyConfigAndRecreateSwapChain(const RendererConfig& config) {}
 
 
     void TempestRenderer::draw() const noexcept { log::info("Drawing..."); }

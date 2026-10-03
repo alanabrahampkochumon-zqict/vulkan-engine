@@ -13,6 +13,7 @@
 #include "RenderDevice.h"
 #include "RenderPipeline.h"
 #include "RenderQueue.h"
+#include "config/RendererConfig.h"
 
 namespace tempest::platform
 {
@@ -26,16 +27,24 @@ namespace tempest::renderer
     class TempestRenderer
     {
     public:
-        TempestRenderer(platform::TempestWindow& window, GraphicsContext& context) noexcept;
-        bool init() noexcept;
+        TempestRenderer(platform::TempestWindow& window, std::string appName, uint32_t appVersion,
+                        std::string engineName, uint32_t engineVersion) noexcept;
+        bool init(const RendererConfig& config) noexcept;
 
+        void beginFrame() const noexcept;
+        void endFrame() const noexcept;
         void draw() const noexcept;
+        void applyConfigAndRecreateSwapChain(const RendererConfig& config);
 
     private:
         platform::TempestWindow& _window;
+
         TempestSurface _surface;
-        GraphicsContext& _context;
+        GraphicsContext _context;
         RenderDevice _device;
-        RenderPipeline _pipeline;
+        // RenderPipeline _pipeline;
+
+        std::string _appName, _engineName;
+        uint32_t _appVersion, _engineVersion;
     };
 } // namespace tempest::renderer
