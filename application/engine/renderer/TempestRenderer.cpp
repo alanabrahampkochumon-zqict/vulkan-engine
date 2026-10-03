@@ -17,7 +17,7 @@ namespace tempest::renderer
     TempestRenderer::TempestRenderer(platform::TempestWindow& window, std::string appName, const uint32_t appVersion,
                                      std::string engineName, const uint32_t engineVersion) noexcept
         : _window{ window },
-          _surface{ _window },
+          _surface{ _window, _context },
           _device{ _context, _surface },
           _appName{ std::move(appName) },
           _engineName{ std::move(engineName) },
@@ -35,8 +35,13 @@ namespace tempest::renderer
             return false;
         }
 
-        // if (_surface.init(_context))
-        //     return true;
+        if (!_surface.init())
+        {
+            log::error("There was an error creating the surface.");
+            return false;
+        }
+
+        return true;
     }
 
     void TempestRenderer::beginFrame() const noexcept {}

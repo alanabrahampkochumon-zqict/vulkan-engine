@@ -16,13 +16,15 @@
 
 namespace tempest::renderer
 {
-    TempestSurface::TempestSurface(platform::TempestWindow& window) noexcept
-        : _window{ window }, _vulkanSurface{ nullptr }
+    TempestSurface::TempestSurface(platform::TempestWindow& window, const GraphicsContext& context) noexcept
+        : _context{ context }, _window{ window }, _vulkanSurface{ nullptr }
     {}
 
 
-    bool TempestSurface::init(const vk::raii::Instance& instance) noexcept
+    bool TempestSurface::init() noexcept
     {
+        const auto& instance = _context.getInstance();
+
         VkSurfaceKHR surface;
         if (!SDL_Vulkan_CreateSurface(_window.getCoreWindow(), *instance, nullptr, &surface))
         {

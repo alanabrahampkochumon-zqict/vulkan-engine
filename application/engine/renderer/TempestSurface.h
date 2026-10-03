@@ -10,6 +10,7 @@
  */
 
 #include "../platform/TempestWindow.h"
+#include "GraphicsContext.h"
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -18,13 +19,14 @@ namespace tempest::renderer
     class TempestSurface
     {
     public:
-        explicit TempestSurface(platform::TempestWindow& window) noexcept;
-        bool init(const vk::raii::Instance& instance) noexcept;
+        explicit TempestSurface(platform::TempestWindow& window, const GraphicsContext& instance) noexcept;
+        bool init() noexcept;
 
         const vk::raii::SurfaceKHR& getBaseSurface() const noexcept { return _vulkanSurface; }
 
     private:
-        platform::TempestWindow& _window;
+        const GraphicsContext& _context;
+        const platform::TempestWindow& _window;
         vk::raii::SurfaceKHR _vulkanSurface;
     };
 } // namespace tempest::renderer
