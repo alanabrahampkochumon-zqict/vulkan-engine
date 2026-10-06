@@ -20,9 +20,7 @@ namespace tempest
 
     TempestApp::TempestApp(std::string name, const uint32_t version) noexcept
         : _window{ INIT_WIDTH, INIT_HEIGHT, std::move(name) },
-          _surface{ _window },
-          _graphicsContext{ true },
-          _renderer{ _window, _graphicsContext },
+          _renderer{ _window, name, version, ENGINE_NAME, ENGINE_VERSION },
           _appName{ std::move(name) },
           _appVersion{ version },
           _isRunning{ false }

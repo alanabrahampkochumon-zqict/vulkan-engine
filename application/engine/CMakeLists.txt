@@ -37,7 +37,7 @@ target_link_libraries(
         TempestRenderer
         TempestUtils
 
-        # StrictWarnings
+        # ${PROJECT_NAME}-StrictWarnings
         SDL3::SDL3-static # TODO: REMOVE
         Vulkan::Headers # TODO: REMOVE
         glm::glm # TODO: Replace with Falcon

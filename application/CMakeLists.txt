@@ -1,19 +1,19 @@
 add_executable(
-        GameEngine
+        ${LIBRARY_NAME}
         Main.cpp
 )
-target_compile_features(GameEngine PUBLIC cxx_std_23)
+target_compile_features(${LIBRARY_NAME} PUBLIC cxx_std_23)
 
-target_include_directories(GameEngine PRIVATE
+target_include_directories(${LIBRARY_NAME} PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 add_subdirectory(engine)
 
 target_link_libraries(
-        GameEngine
+        ${LIBRARY_NAME}
         PRIVATE
-        StrictWarnings
+        ${PROJECT_NAME}-StrictWarnings
         SDL3::SDL3-static
         std::stb
         #        ${Vulkan_LIBRARIES}
@@ -23,34 +23,34 @@ target_link_libraries(
 )
 
 set(SHADER_SOURCES basic.slang)
-AddSlangShaderTarget(GameEngine SOURCES ${SHADER_SOURCES})
+AddSlangShaderTarget(${LIBRARY_NAME} SOURCES ${SHADER_SOURCES})
 
 add_custom_command(
-        TARGET GameEngine
+        TARGET ${LIBRARY_NAME}
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E
         copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/res/shaders"
-        "$<TARGET_FILE_DIR:GameEngine>/shaders"
+        "$<TARGET_FILE_DIR:${LIBRARY_NAME}>/shaders"
         COMMENT "Copying shaders to build directory..."
 )
 
 add_custom_command(
-        TARGET GameEngine
+        TARGET ${LIBRARY_NAME}
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E
         copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/res/textures"
-        "$<TARGET_FILE_DIR:GameEngine>/textures"
+        "$<TARGET_FILE_DIR:${LIBRARY_NAME}>/textures"
         COMMENT "Copying textures to build directory..."
 )
 
 add_custom_command(
-        TARGET GameEngine
+        TARGET ${LIBRARY_NAME}
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E
         copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/res/models"
-        "$<TARGET_FILE_DIR:GameEngine>/models"
+        "$<TARGET_FILE_DIR:${LIBRARY_NAME}>/models"
         COMMENT "Copying models to build directory..."
 )

@@ -33,7 +33,7 @@ target_include_directories(
 target_link_libraries(
     TestSuite PRIVATE
     GTest::gtest_main
-    StrictWarnings
+    ${PROJECT_NAME}-StrictWarnings
 )
 
 include(GoogleTest)

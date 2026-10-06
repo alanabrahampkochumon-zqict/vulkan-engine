@@ -44,6 +44,7 @@ namespace tempest::renderer
               _height{ other._height }
         {}
 
+        //// TODO: Update image so that it can attach a texture rather than just moving one in.
         Image& operator=(Image&& other) noexcept
         {
             if (this == &other)

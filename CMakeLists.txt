@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
-project("Game Engine" LANGUAGES CXX)
+project(Tempest LANGUAGES CXX)
+set(LIBRARY_NAME Tempest)
 enable_testing()
 
 
@@ -12,8 +13,8 @@ enable_testing()
 include_directories(${Vulkan_INCLUDE_DIRS})
 
 
-add_library(StrictWarnings INTERFACE) # Used for linking Warning flags
-add_library(ProjectASan INTERFACE) # Used for linking ASan
+add_library(${PROJECT_NAME}-StrictWarnings INTERFACE) # Used for linking Warning flags
+add_library(${PROJECT_NAME}-ASan INTERFACE) # Used for linking ASan
 
 # Turn on solution folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -26,12 +27,12 @@ find_program(CLANG_FORMATTER NAMES clang-format)
 if (CLANG_FORMATTER)
     file(GLOB_RECURSE ALL_SOURCE_FILES *.cpp *.h *.cxx *.hxx *.hpp *.cc *.hh *.tpp *.inl)
 
-    add_custom_target(format
+    add_custom_target(${PROJECT_NAME}-Format
             COMMAND ${CLANG_FORMATTER} -i -style=file ${ALL_SOURCE_FILES}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             COMMENT "Formatting source files..."
     )
-    set_target_properties(format PROPERTIES FOLDER ${DevToolsDir})
+    set_target_properties(${PROJECT_NAME}-Format PROPERTIES FOLDER ${DevToolsDir})
 else ()
     message(WARNING "clang-format not found")
 endif ()
@@ -42,13 +43,13 @@ find_program(CLANG_TIDY_EXE NAMES clang-tidy)
 if (CLANG_TIDY_EXE)
     # Create a custom target that you manually trigger
     add_custom_target(
-            lint
+            ${PROJECT_NAME}-Tidy
             COMMAND ${CMAKE_COMMAND} -E echo "Running Clang-Tidy on MathLib..."
             COMMAND run-clang-tidy -p ${CMAKE_BINARY_DIR} -header-filter=.*
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             COMMENT "Running static analysis..."
     )
-    set_target_properties(lint PROPERTIES FOLDER ${DevToolsDir})
+    set_target_properties(${PROJECT_NAME}-Tidy PROPERTIES FOLDER ${DevToolsDir})
 else ()
     message(WARNING "clang-tidy not found")
 endif ()
@@ -59,13 +60,13 @@ find_package(Doxygen)
 if (DOXYGEN_FOUND)
     message(STATUS "Doxygen found!")
     doxygen_add_docs(
-            docs
+            ${PROJECT_NAME}-Docs
             ${CMAKE_CURRENT_SOURCE_DIR}
             COMMENT "Generating documentation with doxygen..."
             CONFIG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
             ALL
     )
-    set_target_properties(docs PROPERTIES FOLDER ${DevToolsDir})
+    set_target_properties(${PROJECT_NAME}-Docs PROPERTIES FOLDER ${DevToolsDir})
 else ()
     message(WARN "Doxygen not found! Skipping documentation generation.")
 endif ()
@@ -77,7 +78,7 @@ option(ASAN "Enable ASan" OFF) # Option to enable ASAN
 # Enables Strict Warnings and Debug-only ASan
 if (ENABLE_STRICT)
     include(cmake/StrictMode.cmake)
-    AddStrictMode(StrictWarnings)
+    AddStrictMode(${PROJECT_NAME}-StrictWarnings)
 endif ()
 
 
@@ -85,11 +86,11 @@ endif ()
 if (ASAN)
     message(STATUS "Turning on Address Sanitizer for Debug Builds")
     if (MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:/fsanitize=address;/Zi>)
-        target_link_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
+        target_compile_options(${PROJECT_NAME}-StrictWarnings INTERFACE $<$<CONFIG:Debug>:/fsanitize=address;/Zi>)
+        target_link_options(${PROJECT_NAME}-StrictWarnings INTERFACE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
     else ()
-        target_compile_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:-fsanitize=address;-fno-omit-frame-pointer>)
-        target_link_options(StrictWarnings INTERFACE $<$<CONFIG:Debug>:-fsanitize=address>)
+        target_compile_options(${PROJECT_NAME}-StrictWarnings INTERFACE $<$<CONFIG:Debug>:-fsanitize=address;-fno-omit-frame-pointer>)
+        target_link_options(${PROJECT_NAME}-StrictWarnings INTERFACE $<$<CONFIG:Debug>:-fsanitize=address>)
     endif ()
 endif ()
 
