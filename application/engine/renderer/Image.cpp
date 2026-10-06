@@ -17,12 +17,11 @@
 namespace tempest::renderer
 {
 
-    Image::Image(RenderDevice& device, const uint32_t width, const uint32_t height, const vk::Format format,
+    Image::Image(const RenderDevice& device, const uint32_t width, const uint32_t height, const vk::Format format,
                  const vk::ImageTiling tiling, const vk::ImageUsageFlags usage,
                  const vk::MemoryPropertyFlags properties, const uint32_t mipLevels,
                  const vk::SampleCountFlagBits numSamples, const vk::ImageAspectFlags aspectFlags) noexcept
-        : _device{ device },
-          _format{ format },
+        :          _format{ format },
           _tiling{ tiling },
           _usageFlags{ usage },
           _memoryFlags{ properties },
@@ -32,8 +31,8 @@ namespace tempest::renderer
           _width{ width },
           _height{ height }
     {
-        createImage();
-        createImageView(_aspectFlags);
+        createImage(device);
+        createImageView(device, _aspectFlags);
     }
 
 
@@ -108,10 +107,10 @@ namespace tempest::renderer
     }
 
 
-    void Image::generateMipmaps(const CommandBuffer& commandBuffer, const size_t commandBufferIndex) const noexcept
+    void Image::generateMipmaps(const RenderDevice& device, const CommandBuffer& commandBuffer, const size_t commandBufferIndex) const noexcept
     {
         // Check for bit image platform support
-        const auto formatProperties = _device.getPhysicalDevice().getFormatProperties(_format);
+        const auto formatProperties = device.getPhysicalDevice().getFormatProperties(_format);
         if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear))
         {
             log::error("Texture Image Format doesn't support linear bliting");
@@ -178,7 +177,7 @@ namespace tempest::renderer
 
 
 
-    void Image::createImage() noexcept
+    void Image::createImage(const RenderDevice& device) noexcept
     {
         const vk::ImageCreateInfo imageInfo{ .imageType   = vk::ImageType::e2D,
                                              .format      = _format,
@@ -190,18 +189,18 @@ namespace tempest::renderer
                                              .usage       = _usageFlags,
                                              .sharingMode = vk::SharingMode::eExclusive };
 
-        _image = vk::raii::Image(_device.getDevice(), imageInfo);
+        _image = vk::raii::Image(device.getDevice(), imageInfo);
 
         const vk::MemoryRequirements memRequirements = _image.getMemoryRequirements();
         const vk::MemoryAllocateInfo allocInfo{ .allocationSize  = memRequirements.size,
                                                 .memoryTypeIndex = Buffer::findMemoryType(
-                                                    _device, memRequirements.memoryTypeBits, _memoryFlags) };
-        _memory = std::move(vk::raii::DeviceMemory(_device.getDevice(), allocInfo));
+                                                    device, memRequirements.memoryTypeBits, _memoryFlags) };
+        _memory = std::move(vk::raii::DeviceMemory(device.getDevice(), allocInfo));
         _image.bindMemory(_memory, 0);
     }
 
 
-    void Image::createImageView(const vk::ImageAspectFlags aspectFlags) noexcept
+    void Image::createImageView(const RenderDevice& device, const vk::ImageAspectFlags aspectFlags) noexcept
     {
         const vk::ImageViewCreateInfo viewInfo{ .image            = _image,
                                                 .viewType         = vk::ImageViewType::e2D,
@@ -212,6 +211,6 @@ namespace tempest::renderer
                                                                       .baseArrayLayer = 0,
                                                                       .layerCount     = 1 } };
 
-        _imageView = vk::raii::ImageView(_device.getDevice(), viewInfo);
+        _imageView = vk::raii::ImageView(device.getDevice(), viewInfo);
     }
 } // namespace tempest::renderer

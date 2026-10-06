@@ -12,11 +12,11 @@
 
 #include "GraphicsContext.h"
 #include "RenderDevice.h"
+#include "PresentMode.h"
 
 namespace tempest::renderer
 {
-    SwapChain::SwapChain(RenderDevice& device, renderer::TempestSurface& surface, platform::TempestWindow& window)
-
+    SwapChain::SwapChain(RenderDevice& device, TempestSurface& surface, platform::TempestWindow& window)
         : _selectedPresentMode(PresentMode::VSYNC), _device(device), _surface(surface), _window(window)
     {}
 

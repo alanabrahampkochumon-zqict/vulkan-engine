@@ -9,7 +9,7 @@ add_subdirectory(utils)
 target_sources(
         TempestEngine
         PRIVATE
-        TempestEngine.cpp
+        #TempestEngine.cpp
         Application.cpp
 
         ${vulkanhpp_SOURCE_DIR}
@@ -17,14 +17,14 @@ target_sources(
         PUBLIC
         FILE_SET CXX_MODULES
         FILES
-        TempestEngine.cppm
-        Vertex.cppm
-        UniformBufferObject.cppm
+        #TempestEngine.cppm
+        #Vertex.cppm
+        #UniformBufferObject.cppm
 
         PUBLIC
         FILE_SET HEADERS
         FILES
-        FileReader.h
+        #FileReader.h
         Application.h
 )
 

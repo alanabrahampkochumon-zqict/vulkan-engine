@@ -21,7 +21,7 @@ namespace tempest::renderer
 {
     // TODO: Figure out a way to not create two images to make use of it.
     Texture::Texture(RenderDevice& device, std::string texturePath) noexcept
-        : _image{ device }, _sampler{ nullptr }, _path{ std::move(texturePath) }, _device{ device }
+        : _image{}, _sampler{ nullptr }, _path{ std::move(texturePath) }, _device{ device }
     {
         stbi_uc* pixels          = stbi_load(_path.c_str(), &_width, &_height, &_channels, STBI_rgb_alpha);
         vk::DeviceSize imageSize = _width * _height * 4;
@@ -59,7 +59,7 @@ namespace tempest::renderer
         // Copy the image from staging buffer to textureImage buffer
         _image.copyFromBuffer(stagingBuffer, commandBuffer, 1);
         // Transition to a layout optimal for sampling(while generating mipmaps)
-        _image.generateMipmaps(commandBuffer);
+        _image.generateMipmaps(_device, commandBuffer);
         // transitionImageLayout(commandBuffer, textureImage, vk::ImageLayout::eTransferDstOptimal,
         //                       vk::ImageLayout::eShaderReadOnlyOptimal, textureMipmapLevels);
         commandBuffer.endSingleTimeRecordingAndSubmit();
