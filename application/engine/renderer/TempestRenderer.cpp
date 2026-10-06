@@ -19,9 +19,9 @@ namespace tempest::renderer
         : _window{ window },
           _surface{ _window, _context },
           _device{ _context, _surface },
-          _appName{ std::move(appName) },
+          _pipeline{ _device, _swapChain },
           _swapChain{ _device, _surface, _window },
-          // _pipeline{_device, _swapchain},
+          _appName{ std::move(appName) },
           _engineName{ std::move(engineName) },
           _appVersion{ appVersion },
           _engineVersion{ engineVersion }
@@ -49,6 +49,20 @@ namespace tempest::renderer
         if (!_device.init(_context.getRequiredExtensions(), queueConfig, MIN_GRAPHICS_API_VERSION))
         {
             log::error("There was an error initializing the graphics devices.");
+            return false;
+        }
+
+
+        const PipelineConfig pipelineConfig{
+            .vertPath     = "shaders/slang.spv",
+            .fragPath     = "shaders/slang.spv",
+            .vertMainName = "vertMain",
+            .fragMainName = "fragMain",
+            .sampleCount  = vk::SampleCountFlagBits::e1 // TODO: Update
+        };
+        if (!_pipeline.init(pipelineConfig))
+        {
+            log::error("There was an error initializing the graphics pipeline.");
             return false;
         }
 

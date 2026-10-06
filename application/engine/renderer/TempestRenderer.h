@@ -42,8 +42,8 @@ namespace tempest::renderer
         TempestSurface _surface;
         GraphicsContext _context;
         RenderDevice _device;
+        RenderPipeline _pipeline;
         SwapChain _swapChain;
-        // RenderPipeline _pipeline;
 
         std::string _appName, _engineName;
         uint32_t _appVersion, _engineVersion;

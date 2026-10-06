@@ -20,9 +20,16 @@ namespace tempest::renderer
 {
     using namespace tempest::utils;
 
-    RenderPipeline::RenderPipeline(RenderDevice& device, SwapChain& swapChain, PipelineConfig& config) noexcept
-        : _config{ config }, _renderDevice{ device }, _swapChain{ swapChain }
-    { createGraphicsPipeline(); }
+    RenderPipeline::RenderPipeline(const RenderDevice& device, const SwapChain& swapChain) noexcept
+        : _config(), _renderDevice{ device }, _swapChain{ swapChain }
+    {}
+
+
+    bool RenderPipeline::init(const PipelineConfig& config) noexcept
+    {
+        _config = config;
+        return createGraphicsPipeline();
+    }
 
 
     bool RenderPipeline::createGraphicsPipeline() noexcept
@@ -169,10 +176,10 @@ namespace tempest::renderer
         };
         // BasePipelineHandle and BasePipelineIndex -> used for inheriting pipelines
 
-        _graphicsPipeline = vk::raii::Pipeline(_renderDevice.getDevice(), nullptr,
-                                               pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
+        _pipeline = vk::raii::Pipeline(_renderDevice.getDevice(), nullptr,
+                                       pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
 
-        if (_graphicsPipeline == nullptr)
+        if (_pipeline == nullptr)
         {
             log::error("There was an error creating graphics pipeline");
             return false;

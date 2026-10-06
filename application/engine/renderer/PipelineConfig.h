@@ -17,9 +17,15 @@ namespace tempest::renderer
     struct PipelineConfig
     {
         std::string vertPath;
-        std::string vertMainName;
         std::string fragPath;
-        std::string fragMainName;
+        std::string vertMainName{ "main" };
+        std::string fragMainName{ "main" };
         vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
+
+        static PipelineConfig defaultConfig() noexcept;
     };
+
+
+    inline PipelineConfig PipelineConfig::defaultConfig() noexcept
+    { return PipelineConfig{ .vertPath = "shaders/basic.vert", .fragPath = "shaders/basic.frag" }; }
 } // namespace tempest::renderer

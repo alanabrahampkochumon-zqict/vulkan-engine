@@ -23,8 +23,9 @@ namespace tempest::renderer
     class RenderPipeline
     {
     public:
-        RenderPipeline(RenderDevice& device, SwapChain& swapChain, PipelineConfig& config) noexcept;
+        RenderPipeline(const RenderDevice& device, const SwapChain& swapChain) noexcept;
 
+        bool init(const PipelineConfig& config) noexcept;
 
     protected:
         bool createGraphicsPipeline() noexcept;
@@ -32,14 +33,14 @@ namespace tempest::renderer
         vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const noexcept;
         vk::Format findDepthFormat() const noexcept;
         vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
-                                                      vk::FormatFeatureFlags features) const;
+                                       vk::FormatFeatureFlags features) const;
 
     private:
-        PipelineConfig& _config;
+        PipelineConfig _config;
         vk::raii::PipelineLayout _pipelineLayout{ nullptr };
-        vk::raii::Pipeline _graphicsPipeline{ nullptr };
-        RenderDevice& _renderDevice;
-        SwapChain& _swapChain;
+        vk::raii::Pipeline _pipeline{ nullptr };
+        const RenderDevice& _renderDevice;
+        const SwapChain& _swapChain;
 
         // Separate?
         vk::raii::DescriptorSetLayout _descriptorSetLayout{ nullptr };

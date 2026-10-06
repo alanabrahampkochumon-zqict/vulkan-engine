@@ -1349,7 +1349,7 @@ namespace tempest
     }
 
 
-    vk::Format TempestEngine::findDepthFormat() const
+    vk::Format TempestEngine:: findDepthFormat() const
     {
         return findSupportedFormat(
             { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
