@@ -27,7 +27,7 @@ namespace tempest::renderer
         UNSUPPORTED = std::numeric_limits<uint8_t>::max()
     };
 
-    constexpr PresentMode fromVKPresentMode(vk::PresentModeKHR vkPresentMode) noexcept;
-    constexpr vk::PresentModeKHR toVKPresentMode(PresentMode presentMode) noexcept;
+    PresentMode fromVKPresentMode(vk::PresentModeKHR vkPresentMode) noexcept;
+    vk::PresentModeKHR toVKPresentMode(PresentMode presentMode) noexcept;
 
 } // namespace tempest::renderer

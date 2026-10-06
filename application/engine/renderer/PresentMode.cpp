@@ -14,7 +14,7 @@
 
 namespace tempest::renderer
 {
-    constexpr PresentMode fromVKPresentMode(const vk::PresentModeKHR vkPresentMode) noexcept
+    PresentMode fromVKPresentMode(const vk::PresentModeKHR vkPresentMode) noexcept
     {
         switch (vkPresentMode)
         {
@@ -30,7 +30,7 @@ namespace tempest::renderer
     }
 
 
-    constexpr vk::PresentModeKHR toVKPresentMode(const PresentMode presentMode) noexcept
+    vk::PresentModeKHR toVKPresentMode(const PresentMode presentMode) noexcept
     {
         switch (presentMode)
         {
