@@ -10,20 +10,29 @@
  */
 
 
+#include "Logger.h"
+
 #include <format>
 #include <fstream>
 #include <vector>
 
 namespace tempest::utils
 {
-    std::vector<char> readFile(const std::string& filename) noexcept
+    /**
+     * @brief Read a binary file with @p filename.
+     *
+     * @param filename The name of the file to read.
+     * @return A char array(vector) of the file data, or an empty vector if an error occured.
+     */
+    inline std::vector<char> readFile(const std::string& filename) noexcept
     {
         // Create a fstream with read binary and start at end of file set.
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
         if (!file.is_open())
         {
-            throw std::runtime_error(std::format("There was an error opening the file.").c_str());
+            log::error(std::format("There was an error opening the file.").c_str());
+            return std::vector<char>{};
         }
 
         // Create a buffer
