@@ -21,14 +21,27 @@ namespace tempest::renderer
     using namespace tempest::utils;
 
     RenderPipeline::RenderPipeline(const RenderDevice& device, const SwapChain& swapChain) noexcept
-        : _config(), _renderDevice{ device }, _swapChain{ swapChain }
+        : _config(),
+          _renderDevice{ device },
+          _swapChain{ swapChain },
+          _vertexBuffer{_renderDevice},
+          _indexBuffer{_renderDevice},
+          _uniformBuffer{_renderDevice},
+          _colorImage(),
+          _depthImage()
     {}
 
 
     bool RenderPipeline::init(const PipelineConfig& config) noexcept
     {
         _config = config;
-        return createGraphicsPipeline();
+        if (!createGraphicsPipeline())
+        {
+            log::error("There was an error creating the graphics pipeline.");
+            return false;
+        }
+
+        return true;
     }
 
 
@@ -223,6 +236,27 @@ namespace tempest::renderer
         }
         throw std::runtime_error("Failed to find the supported format!");
     }
+
+
+    bool RenderPipeline::createDepthResources() noexcept
+    {
+        const vk::Format format     = findDepthFormat();
+        const auto& [width, height] = _swapChain.getExtent();
+        _depthImage =
+            std::move(Image(_renderDevice, width, height, format, vk::ImageTiling::eOptimal,
+                            vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal,
+                            1, vk::SampleCountFlagBits::e1, vk::ImageAspectFlagBits::eDepth));
+    }
+
+    bool RenderPipeline::createColorResources() noexcept {}
+
+    bool RenderPipeline::createDescriptor() noexcept {}
+
+    bool RenderPipeline::createIndexBuffer() noexcept {}
+
+    bool RenderPipeline::createVertexBuffer() noexcept {}
+
+    bool RenderPipeline::createUniformBuffer() noexcept {}
 
 
 } // namespace tempest::renderer

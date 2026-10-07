@@ -10,6 +10,8 @@
  */
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include "Buffer.h"
+#include "Image.h"
 #include "PipelineConfig.h"
 #include "RenderDevice.h"
 #include "Swapchain.h"
@@ -34,6 +36,12 @@ namespace tempest::renderer
         vk::Format findDepthFormat() const noexcept;
         vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
                                        vk::FormatFeatureFlags features) const;
+        bool createDepthResources() noexcept;
+        bool createColorResources() noexcept;
+        bool createDescriptor() noexcept;
+        bool createIndexBuffer() noexcept;
+        bool createVertexBuffer() noexcept;
+        bool createUniformBuffer() noexcept;
 
     private:
         PipelineConfig _config;
@@ -41,6 +49,8 @@ namespace tempest::renderer
         vk::raii::Pipeline _pipeline{ nullptr };
         const RenderDevice& _renderDevice;
         const SwapChain& _swapChain;
+        Buffer _vertexBuffer, _indexBuffer, _uniformBuffer;
+        Image _colorImage, _depthImage;
 
         // Separate?
         vk::raii::DescriptorSetLayout _descriptorSetLayout{ nullptr };

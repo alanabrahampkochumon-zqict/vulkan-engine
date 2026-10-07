@@ -19,12 +19,15 @@ namespace tempest::renderer
     class Buffer
     {
     public:
-        // TODO: Update to custom flags
-        Buffer(RenderDevice& device, size_t size, vk::BufferUsageFlagBits usageFlags,
-               vk::MemoryPropertyFlags memProperties) noexcept;
+        explicit Buffer(const RenderDevice& device) noexcept;
 
-        Buffer(const Buffer& other)            = delete;
-        Buffer& operator=(const Buffer& other) = delete;
+        // TODO: Update to custom flags
+        bool create(size_t size, vk::BufferUsageFlagBits usageFlags, vk::MemoryPropertyFlags memProperties) noexcept;
+
+        Buffer(const Buffer& other)                = delete;
+        Buffer(Buffer&& other) noexcept            = delete;
+        Buffer& operator=(const Buffer& other)     = delete;
+        Buffer& operator=(Buffer&& other) noexcept = delete;
 
         /// Copy the current buffer to a new destinations.
         void copyTo(const Buffer& destination, size_t size, RenderQueue& queue) const noexcept;
@@ -32,8 +35,7 @@ namespace tempest::renderer
         /// TODO: Add CopyToImage
 
         /// Copy @p source buffer to @p destination.
-        static void copy(const Buffer& source, const Buffer& destination, size_t size,
-                         RenderQueue& queue) noexcept;
+        static void copy(const Buffer& source, const Buffer& destination, size_t size, RenderQueue& queue) noexcept;
 
         void memcpy(const void* source, size_t size) const noexcept;
 
@@ -50,6 +52,6 @@ namespace tempest::renderer
         size_t _size{};
         vk::raii::Buffer _buffer{ nullptr };
         vk::raii::DeviceMemory _memory{ nullptr };
-        RenderDevice& _device;
+        const RenderDevice& _device;
     };
 } // namespace tempest::renderer

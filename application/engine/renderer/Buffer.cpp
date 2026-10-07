@@ -16,9 +16,10 @@
 
 namespace tempest::renderer
 {
-    Buffer::Buffer(RenderDevice& device, const size_t size, const vk::BufferUsageFlagBits usageFlags,
-                   const vk::MemoryPropertyFlags memProperties) noexcept
-        : _size{ size }, _device{ device }
+    Buffer::Buffer(const RenderDevice& device) noexcept: _device{ device } {}
+
+    bool Buffer::create(const size_t size, const vk::BufferUsageFlagBits usageFlags,
+                        const vk::MemoryPropertyFlags memProperties) noexcept
     {
         // In vulkan we need to create a buffer, then allocate memory as per it's requirements
         // and bind the memory to the buffer.
@@ -32,6 +33,8 @@ namespace tempest::renderer
                                                        _device, memRequirements.memoryTypeBits, memProperties) };
         _memory = vk::raii::DeviceMemory(_device.getDevice(), allocateInfo);
         _buffer.bindMemory(*_memory, 0);
+
+        return _buffer != nullptr && _memory != nullptr;
     }
 
 
@@ -56,7 +59,6 @@ namespace tempest::renderer
         return std::numeric_limits<uint32_t>::max();
     }
 
-
     void Buffer::copyTo(const Buffer& destination, const size_t size, RenderQueue& queue) const noexcept
     {
         const CommandBuffer copyCommandBuffer{ _device, queue, 1 };
@@ -67,8 +69,7 @@ namespace tempest::renderer
     }
 
 
-    void Buffer::copy(const Buffer& source, const Buffer& destination, const size_t size,
-                      RenderQueue& queue) noexcept
+    void Buffer::copy(const Buffer& source, const Buffer& destination, const size_t size, RenderQueue& queue) noexcept
     { source.copyTo(destination, size, queue); }
 
 
