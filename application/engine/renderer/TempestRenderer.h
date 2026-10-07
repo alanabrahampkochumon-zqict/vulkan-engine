@@ -36,6 +36,17 @@ namespace tempest::renderer
         void draw() const noexcept;
         void applyConfigAndRecreateSwapChain(const RendererConfig& config);
 
+
+    private:
+        vk::Format findDepthFormat() const noexcept;
+
+        bool createDepthResources(vk::SampleCountFlagBits msaaSamples) noexcept;
+        bool createColorResources(vk::SampleCountFlagBits msaaSamples) noexcept;
+        // bool createDescriptor() noexcept;
+        // bool createIndexBuffer() noexcept;
+        // bool createVertexBuffer() noexcept;
+        // bool createUniformBuffer() noexcept;
+
     private:
         platform::TempestWindow& _window;
 
@@ -44,6 +55,8 @@ namespace tempest::renderer
         RenderDevice _device;
         RenderPipeline _pipeline;
         SwapChain _swapChain;
+        Buffer _vertexBuffer, _indexBuffer, _uniformBuffer;
+        Image _colorImage, _depthImage;
 
         std::string _appName, _engineName;
         uint32_t _appVersion, _engineVersion;

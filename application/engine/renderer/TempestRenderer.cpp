@@ -21,6 +21,11 @@ namespace tempest::renderer
           _device{ _context, _surface },
           _pipeline{ _device, _swapChain },
           _swapChain{ _device, _surface, _window },
+          _vertexBuffer{ _device },
+          _indexBuffer{ _device },
+          _uniformBuffer{ _device },
+          // _colorImage(),
+          // _depthImage(),
           _appName{ std::move(appName) },
           _engineName{ std::move(engineName) },
           _appVersion{ appVersion },
@@ -74,6 +79,38 @@ namespace tempest::renderer
 
         return true;
     }
+
+
+    vk::Format TempestRenderer::findDepthFormat() const noexcept
+    {
+        return _pipeline.findSupportedFormat(
+            { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
+            vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+    }
+
+
+    bool TempestRenderer::createDepthResources(const vk::SampleCountFlagBits msaaSamples) noexcept
+    {
+        const vk::Format format     = findDepthFormat();
+        const auto& [width, height] = _swapChain.getExtent();
+        _depthImage                 = std::move(Image(
+            _device, width, height, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            vk::MemoryPropertyFlagBits::eDeviceLocal, 1, msaaSamples, vk::ImageAspectFlagBits::eDepth));
+        return true;
+    }
+
+
+    bool TempestRenderer::createColorResources(const vk::SampleCountFlagBits msaaSamples) noexcept
+    {
+        const vk::Format format     = _swapChain.getFormat().format;
+        const auto& [width, height] = _swapChain.getExtent();
+        _colorImage =
+            std::move(Image(_device, width, height, format, vk::ImageTiling::eOptimal,
+                            vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
+                            vk::MemoryPropertyFlagBits::eDeviceLocal, 1, msaaSamples, vk::ImageAspectFlagBits::eColor));
+        return true;
+    }
+
 
     void TempestRenderer::beginFrame() const noexcept {}
 

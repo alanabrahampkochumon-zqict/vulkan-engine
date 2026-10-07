@@ -23,12 +23,7 @@ namespace tempest::renderer
     RenderPipeline::RenderPipeline(const RenderDevice& device, const SwapChain& swapChain) noexcept
         : _config(),
           _renderDevice{ device },
-          _swapChain{ swapChain },
-          _vertexBuffer{_renderDevice},
-          _indexBuffer{_renderDevice},
-          _uniformBuffer{_renderDevice},
-          _colorImage(),
-          _depthImage()
+          _swapChain{ swapChain }
     {}
 
 
@@ -212,12 +207,7 @@ namespace tempest::renderer
     }
 
 
-    vk::Format RenderPipeline::findDepthFormat() const noexcept
-    {
-        return findSupportedFormat(
-            { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
-            vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
-    }
+
 
 
     vk::Format RenderPipeline::findSupportedFormat(const std::vector<vk::Format>& candidates,
@@ -236,27 +226,5 @@ namespace tempest::renderer
         }
         throw std::runtime_error("Failed to find the supported format!");
     }
-
-
-    bool RenderPipeline::createDepthResources() noexcept
-    {
-        const vk::Format format     = findDepthFormat();
-        const auto& [width, height] = _swapChain.getExtent();
-        _depthImage =
-            std::move(Image(_renderDevice, width, height, format, vk::ImageTiling::eOptimal,
-                            vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal,
-                            1, vk::SampleCountFlagBits::e1, vk::ImageAspectFlagBits::eDepth));
-    }
-
-    bool RenderPipeline::createColorResources() noexcept {}
-
-    bool RenderPipeline::createDescriptor() noexcept {}
-
-    bool RenderPipeline::createIndexBuffer() noexcept {}
-
-    bool RenderPipeline::createVertexBuffer() noexcept {}
-
-    bool RenderPipeline::createUniformBuffer() noexcept {}
-
 
 } // namespace tempest::renderer
