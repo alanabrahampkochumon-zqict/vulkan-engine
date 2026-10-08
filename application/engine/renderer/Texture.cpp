@@ -39,7 +39,8 @@ namespace tempest::renderer
         constexpr auto properties =
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         // Move the image to staging buffer
-        const auto stagingBuffer = Buffer(_device, imageSize, vk::BufferUsageFlagBits::eTransferSrc, properties);
+        Buffer stagingBuffer(_device);
+        stagingBuffer.create(imageSize, vk::BufferUsageFlagBits::eTransferSrc, properties);
         stagingBuffer.memcpy(pixels, imageSize);
 
         // Free the image buffer
