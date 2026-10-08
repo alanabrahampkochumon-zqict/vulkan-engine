@@ -134,6 +134,23 @@ namespace tempest::renderer
 
 
 
+    uint32_t RenderDevice::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const noexcept
+    {
+        const vk::PhysicalDeviceMemoryProperties memProperties = _physicalDevice.getMemoryProperties();
+
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
+        {
+            if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+            {
+                return i;
+            }
+        }
+
+        log::error("Failed to find a suitable memory type.");
+        return std::numeric_limits<uint32_t>::max();
+    }
+
+
     vk::SampleCountFlagBits RenderDevice::getMaximumSupportSamples() const noexcept
     {
         const vk::PhysicalDeviceProperties properties = _physicalDevice.getProperties();

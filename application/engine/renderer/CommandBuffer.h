@@ -19,7 +19,7 @@ namespace tempest::renderer
     class CommandBuffer
     {
     public:
-        CommandBuffer(RenderDevice& device, RenderQueue& queue, size_t count) noexcept;
+        CommandBuffer(const RenderDevice& device, RenderQueue& queue, size_t count) noexcept;
         void startRecording(uint32_t index) const noexcept;
         void endRecording(uint32_t index) const noexcept;
 
@@ -41,7 +41,7 @@ namespace tempest::renderer
         vk::raii::CommandPool _commandPool{ nullptr };
         std::vector<vk::raii::CommandBuffer> _commandBuffers{};
         const size_t _count;
-        RenderDevice& _device;
+        const RenderDevice& _device;
         // While the device has the render queue information, since we are allocating from a commandpool for that
         // queue, user has to explicitly provide it.
         RenderQueue& _queue;

@@ -160,7 +160,7 @@ namespace tempest::renderer
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ .setLayoutCount         = 1,
                                                          .pSetLayouts            = &*_descriptorSetLayout,
                                                          .pushConstantRangeCount = 0 };
-        _pipelineLayout = vk::raii::PipelineLayout(_renderDevice.getDevice(), pipelineLayoutInfo);
+        _pipelineLayout = vk::raii::PipelineLayout(_renderDevice.getBaseDevice(), pipelineLayoutInfo);
 
         // Dynamic rendering
         // Create the pipeline with graphics and rendering pipelines
@@ -184,7 +184,7 @@ namespace tempest::renderer
         };
         // BasePipelineHandle and BasePipelineIndex -> used for inheriting pipelines
 
-        _pipeline = vk::raii::Pipeline(_renderDevice.getDevice(), nullptr,
+        _pipeline = vk::raii::Pipeline(_renderDevice.getBaseDevice(), nullptr,
                                        pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
 
         if (_pipeline == nullptr)
@@ -202,7 +202,7 @@ namespace tempest::renderer
             .codeSize = code.size(),
             .pCode    = reinterpret_cast<uint32_t const*>(code.data()),
         };
-        vk::raii::ShaderModule module{ _renderDevice.getDevice(), shaderCreateInfo };
+        vk::raii::ShaderModule module{ _renderDevice.getBaseDevice(), shaderCreateInfo };
         return module;
     }
 

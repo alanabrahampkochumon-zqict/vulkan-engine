@@ -28,6 +28,7 @@ add_library(
         TempestRenderer.h
         TempestSurface.h
         Texture.h
+        UniformBufferObject.h
         Vertex.h
 
         config/RendererConfig.h

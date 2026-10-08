@@ -22,11 +22,15 @@ namespace tempest::renderer
         explicit Buffer(const RenderDevice& device) noexcept;
 
         // TODO: Update to custom flags
-        bool create(size_t size, vk::BufferUsageFlagBits usageFlags, vk::MemoryPropertyFlags memProperties) noexcept;
+        bool create(size_t size, vk::BufferUsageFlags usageFlags, vk::MemoryPropertyFlags memProperties) noexcept;
 
-        Buffer(const Buffer& other)                = delete;
-        Buffer(Buffer&& other) noexcept            = delete;
-        Buffer& operator=(const Buffer& other)     = delete;
+        /// Write raw data to the buffer.
+        void write(const void* data, size_t size) const;
+
+        Buffer(const Buffer& other)            = delete;
+        Buffer& operator=(const Buffer& other) = delete;
+        // TODO: Update buffer to be a resource that is managed by a repository
+        Buffer(Buffer&& other) noexcept: _device{ other._device } {}
         Buffer& operator=(Buffer&& other) noexcept = delete;
 
         /// Copy the current buffer to a new destinations.
@@ -41,12 +45,6 @@ namespace tempest::renderer
 
         [[nodiscard]] const vk::raii::Buffer& getBaseBuffer() const { return _buffer; }
         [[nodiscard]] const vk::raii::DeviceMemory& getBaseMemory() const { return _memory; }
-
-    private:
-        static uint32_t findMemoryType(const RenderDevice& device, uint32_t typeFilter,
-                                       vk::MemoryPropertyFlags properties) noexcept;
-
-        friend class Image; /// TODO: Update Leaky Abstraction?
 
     private:
         size_t _size{};

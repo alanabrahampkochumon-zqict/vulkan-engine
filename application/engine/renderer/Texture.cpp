@@ -94,7 +94,7 @@ namespace tempest::renderer
         // Map mapping
         samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
 
-        _sampler = vk::raii::Sampler(_device.getDevice(), samplerInfo);
+        _sampler = vk::raii::Sampler(_device.getBaseDevice(), samplerInfo);
     }
 
 } // namespace tempest::renderer

@@ -13,6 +13,7 @@
 #include "RenderDevice.h"
 #include "RenderPipeline.h"
 #include "RenderQueue.h"
+#include "Vertex.h"
 #include "config/RendererConfig.h"
 
 namespace tempest::platform
@@ -43,9 +44,9 @@ namespace tempest::renderer
         bool createDepthResources(vk::SampleCountFlagBits msaaSamples) noexcept;
         bool createColorResources(vk::SampleCountFlagBits msaaSamples) noexcept;
         // bool createDescriptor() noexcept;
-        // bool createIndexBuffer() noexcept;
-        // bool createVertexBuffer() noexcept;
-        // bool createUniformBuffer() noexcept;
+        bool createIndexBuffer(const std::vector<uint32_t>& indices) noexcept;
+        bool createVertexBuffer(const std::vector<Vertex>& vertices) noexcept;
+        bool createUniformBuffer() noexcept;
 
     private:
         platform::TempestWindow& _window;
@@ -55,7 +56,8 @@ namespace tempest::renderer
         RenderDevice _device;
         RenderPipeline _pipeline;
         SwapChain _swapChain;
-        Buffer _vertexBuffer, _indexBuffer, _uniformBuffer;
+        Buffer _vertexBuffer, _indexBuffer;
+        std::vector<Buffer> _uniformBuffers;
         Image _colorImage, _depthImage;
 
         std::string _appName, _engineName;
@@ -63,5 +65,6 @@ namespace tempest::renderer
 
 
         static constexpr auto MIN_GRAPHICS_API_VERSION = VK_API_VERSION_1_3;
+        static constexpr auto MAX_FRAMES_IN_FLIGHT     = 2;
     };
 } // namespace tempest::renderer

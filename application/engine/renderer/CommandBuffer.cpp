@@ -14,7 +14,7 @@
 namespace tempest::renderer
 {
 
-    CommandBuffer::CommandBuffer(RenderDevice& device, RenderQueue& queue, const size_t count) noexcept
+    CommandBuffer::CommandBuffer(const RenderDevice& device, RenderQueue& queue, const size_t count) noexcept
         : _count{ count }, _device{ device }, _queue{ queue }
     {
         createCommandPool();
@@ -55,7 +55,7 @@ namespace tempest::renderer
 
         // Command buffers execute by submitting them to ONE of the device queues, like graphics or presentation,
         // and each queue type require a different command buffer
-        _commandPool = vk::raii::CommandPool(_device.getDevice(), commandPoolCreateInfo);
+        _commandPool = vk::raii::CommandPool(_device.getBaseDevice(), commandPoolCreateInfo);
     }
 
     void CommandBuffer::createCommandBuffers() noexcept
@@ -69,6 +69,6 @@ namespace tempest::renderer
             .commandBufferCount = static_cast<uint32_t>(_count)
         };
 
-        _commandBuffers = std::move(vk::raii::CommandBuffers(_device.getDevice(), commandBufferInfo));
+        _commandBuffers = std::move(vk::raii::CommandBuffers(_device.getBaseDevice(), commandBufferInfo));
     }
 } // namespace tempest::renderer

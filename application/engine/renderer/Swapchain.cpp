@@ -63,7 +63,7 @@ namespace tempest::renderer
             .oldSwapchain = *oldSwapChain
 
         };
-        _swapChainInstance = vk::raii::SwapchainKHR(_device.getDevice(), swapChainCreateInfo);
+        _swapChainInstance = vk::raii::SwapchainKHR(_device.getBaseDevice(), swapChainCreateInfo);
         _images            = _swapChainInstance.getImages();
     }
 
@@ -187,7 +187,7 @@ namespace tempest::renderer
                                                                       .baseArrayLayer = 0,
                                                                       .layerCount     = 1 } };
 
-        return vk::raii::ImageView(_device.getDevice(), viewInfo);
+        return vk::raii::ImageView(_device.getBaseDevice(), viewInfo);
     }
 
 

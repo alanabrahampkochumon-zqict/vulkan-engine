@@ -18,7 +18,7 @@ namespace tempest::renderer
 {
     Buffer::Buffer(const RenderDevice& device) noexcept: _device{ device } {}
 
-    bool Buffer::create(const size_t size, const vk::BufferUsageFlagBits usageFlags,
+    bool Buffer::create(const size_t size, const vk::BufferUsageFlags usageFlags,
                         const vk::MemoryPropertyFlags memProperties) noexcept
     {
         // In vulkan we need to create a buffer, then allocate memory as per it's requirements
@@ -26,38 +26,25 @@ namespace tempest::renderer
         const vk::BufferCreateInfo bufferInfo{ .size        = size,
                                                .usage       = usageFlags,
                                                .sharingMode = vk::SharingMode::eExclusive };
-        _buffer                                      = vk::raii::Buffer(_device.getDevice(), bufferInfo);
+        _buffer                                      = vk::raii::Buffer(_device.getBaseDevice(), bufferInfo);
         const vk::MemoryRequirements memRequirements = _buffer.getMemoryRequirements();
         const vk::MemoryAllocateInfo allocateInfo{ .allocationSize  = memRequirements.size,
-                                                   .memoryTypeIndex = findMemoryType(
-                                                       _device, memRequirements.memoryTypeBits, memProperties) };
-        _memory = vk::raii::DeviceMemory(_device.getDevice(), allocateInfo);
+                                                   .memoryTypeIndex = _device.findMemoryType(
+                                                       memRequirements.memoryTypeBits, memProperties) };
+        _memory = vk::raii::DeviceMemory(_device.getBaseDevice(), allocateInfo);
         _buffer.bindMemory(*_memory, 0);
 
         return _buffer != nullptr && _memory != nullptr;
     }
 
 
-    uint32_t Buffer::findMemoryType(const RenderDevice& device, const uint32_t typeFilter,
-                                    const vk::MemoryPropertyFlags properties) noexcept
+    void Buffer::write(const void* data, const size_t size) const
     {
-        // Graphics cards provide different memory types, so we need to query and choose one
-        // that best fits our requirements
-        const vk::PhysicalDeviceMemoryProperties memProperties = device.getPhysicalDevice().getMemoryProperties();
-        // Has memoryTypes and memoryHeaps
-
-        // Return the index of memory type if it matches the properties we need.
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
-        {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-            {
-                return i;
-            }
-        }
-        log::error("Failed to find a suitable memory type");
-        // TODO: Check whether this is a valid type and only return an invalid type.
-        return std::numeric_limits<uint32_t>::max();
+        void* dst = _memory.mapMemory(0, _size);
+        std::memcpy(dst, data, size);
+        _memory.unmapMemory();
     }
+
 
     void Buffer::copyTo(const Buffer& destination, const size_t size, RenderQueue& queue) const noexcept
     {

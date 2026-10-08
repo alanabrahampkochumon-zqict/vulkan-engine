@@ -38,10 +38,15 @@ namespace tempest::renderer
                   uint32_t minAPIVersion) noexcept;
 
         [[nodiscard]] const vk::raii::PhysicalDevice& getPhysicalDevice() const noexcept { return _physicalDevice; }
-        [[nodiscard]] const vk::raii::Device& getDevice() const noexcept { return _device; }
+        [[nodiscard]] const vk::raii::Device& getBaseDevice() const noexcept { return _device; }
         [[nodiscard]] const std::vector<RenderQueue>& getQueues() const noexcept { return _queues; }
         [[nodiscard]] std::vector<RenderQueue>& getQueues() noexcept { return _queues; }
         [[nodiscard]] const vk::PhysicalDeviceFeatures& getDeviceFeatures() const noexcept { return _features; }
+
+        /// Get the index of the memory type that supports the given properties.
+        /// @return Index of the memory type if supported.
+        /// @return UINT32_MAX otherwise.
+        [[nodiscard]] uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const noexcept;
 
         /// Get the maximum number of MSAA samples supported.
         [[nodiscard]] vk::SampleCountFlagBits getMaximumSupportSamples() const noexcept;
@@ -51,7 +56,8 @@ namespace tempest::renderer
                                 uint32_t minAPIVersion) noexcept;
 
         /// Create a logical device that interfaces with the physical device.
-        bool createLogicalDevice(const TempestSurface& surface,const std::vector<const char*>& requiredExtensions, QueueConfig config) noexcept;
+        bool createLogicalDevice(const TempestSurface& surface, const std::vector<const char*>& requiredExtensions,
+                                 QueueConfig config) noexcept;
 
         /// TODO: Update for vk specific params to renderer ones
     private:

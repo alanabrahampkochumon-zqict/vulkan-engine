@@ -11,6 +11,8 @@
 #include "TempestRenderer.h"
 
 #include "../utils/Logger.h"
+#include "UniformBufferObject.h"
+#include "Vertex.h"
 
 namespace tempest::renderer
 {
@@ -109,6 +111,83 @@ namespace tempest::renderer
                             vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
                             vk::MemoryPropertyFlagBits::eDeviceLocal, 1, msaaSamples, vk::ImageAspectFlagBits::eColor));
         return true;
+    }
+
+
+    // TODO: Update buffers to a general pool
+    bool TempestRenderer::createIndexBuffer(const std::vector<uint32_t>& indices) noexcept
+    {
+        // Since the memory used by gpu for fast transfer are not host accessible we need
+        // to create a staging buffer(HOST_VISIBLE) and then transfer the data into the fast DeviceLocal Memory.
+        // const vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+        //------------- STAGING BUFFER ------------------
+        // The driver may not copy the memory immediately due to caching.
+        // SOL 1: use vk::MemoryPropertyFlagBits::eHostCoherent(Used here)
+        // SOL 2: use vk::raii::Device::flushMappedMemoryRanges after writing to mapped memory
+        //        vk::raii::Device::invalidateMappedMemoryRanges before reading from mapped memory.
+        const auto size = indices.size() * sizeof(indices[0]);
+        Buffer stagingBuffer(_device);
+        if (!stagingBuffer.create(size, vk::BufferUsageFlagBits::eTransferSrc,
+                                  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
+        {
+            log::error("There was an error create the staging buffer for indices.");
+            return false;
+        }
+        stagingBuffer.write(indices.data(), indices.size());
+
+
+        //------------- GPU BUFFER ------------------
+        if (!_indexBuffer.create(size, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+                                 vk::MemoryPropertyFlagBits::eDeviceLocal))
+        {
+            log::error("There was an error creating the index buffer");
+            return false;
+        }
+        stagingBuffer.copyTo(_indexBuffer, size, _device.getQueues()[0]);
+        return true;
+    }
+
+
+    bool TempestRenderer::createVertexBuffer(const std::vector<Vertex>& vertices) noexcept
+    {
+        const auto size = vertices.size() * sizeof(vertices[0]);
+        Buffer stagingBuffer(_device);
+        if (!stagingBuffer.create(size, vk::BufferUsageFlagBits::eTransferSrc,
+                                  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
+        {
+            log::error("There was an error create the staging buffer for vertex.");
+            return false;
+        }
+        stagingBuffer.write(vertices.data(), vertices.size());
+
+
+        //------------- GPU BUFFER ------------------
+        if (!_vertexBuffer.create(size, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+                                  vk::MemoryPropertyFlagBits::eDeviceLocal))
+        {
+            log::error("There was an error creating the vertex buffer");
+            return false;
+        }
+        stagingBuffer.copyTo(_vertexBuffer, size, _device.getQueues()[0]);
+        return true;
+    }
+
+    bool TempestRenderer::createUniformBuffer() noexcept
+    {
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            constexpr vk::DeviceSize size = sizeof(UniformBufferObject);
+            _uniformBuffers.emplace_back(std::move(Buffer(_device)));
+
+            auto [buffer, bufferMemory] =
+                createBuffer(size, vk::BufferUsageFlagBits::eUniformBuffer,
+                             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            uniformBuffers.emplace_back(std::move(buffer));
+            uniformBuffersMemory.emplace_back(std::move(bufferMemory));
+            // Persistent mapping since we are updating buffer every frame, it is better to persistent mapping.
+            uniformBuffersMapped.emplace_back(uniformBuffersMemory.back().mapMemory(0, size));
+        }
     }
 
 

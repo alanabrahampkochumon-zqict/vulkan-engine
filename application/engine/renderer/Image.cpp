@@ -21,7 +21,7 @@ namespace tempest::renderer
                  const vk::ImageTiling tiling, const vk::ImageUsageFlags usage,
                  const vk::MemoryPropertyFlags properties, const uint32_t mipLevels,
                  const vk::SampleCountFlagBits numSamples, const vk::ImageAspectFlags aspectFlags) noexcept
-        :          _format{ format },
+        : _format{ format },
           _tiling{ tiling },
           _usageFlags{ usage },
           _memoryFlags{ properties },
@@ -107,7 +107,8 @@ namespace tempest::renderer
     }
 
 
-    void Image::generateMipmaps(const RenderDevice& device, const CommandBuffer& commandBuffer, const size_t commandBufferIndex) const noexcept
+    void Image::generateMipmaps(const RenderDevice& device, const CommandBuffer& commandBuffer,
+                                const size_t commandBufferIndex) const noexcept
     {
         // Check for bit image platform support
         const auto formatProperties = device.getPhysicalDevice().getFormatProperties(_format);
@@ -189,13 +190,13 @@ namespace tempest::renderer
                                              .usage       = _usageFlags,
                                              .sharingMode = vk::SharingMode::eExclusive };
 
-        _image = vk::raii::Image(device.getDevice(), imageInfo);
+        _image = vk::raii::Image(device.getBaseDevice(), imageInfo);
 
         const vk::MemoryRequirements memRequirements = _image.getMemoryRequirements();
         const vk::MemoryAllocateInfo allocInfo{ .allocationSize  = memRequirements.size,
-                                                .memoryTypeIndex = Buffer::findMemoryType(
-                                                    device, memRequirements.memoryTypeBits, _memoryFlags) };
-        _memory = std::move(vk::raii::DeviceMemory(device.getDevice(), allocInfo));
+                                                .memoryTypeIndex = device.findMemoryType(memRequirements.memoryTypeBits,
+                                                                                         _memoryFlags) };
+        _memory = std::move(vk::raii::DeviceMemory(device.getBaseDevice(), allocInfo));
         _image.bindMemory(_memory, 0);
     }
 
@@ -211,6 +212,6 @@ namespace tempest::renderer
                                                                       .baseArrayLayer = 0,
                                                                       .layerCount     = 1 } };
 
-        _imageView = vk::raii::ImageView(device.getDevice(), viewInfo);
+        _imageView = vk::raii::ImageView(device.getBaseDevice(), viewInfo);
     }
 } // namespace tempest::renderer
